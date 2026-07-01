@@ -1,0 +1,129 @@
+<div class="transfer-wrapper">
+
+  <div class="steps-indicator">
+    <div class="step" [class.active]="step === 'details'" [class.done]="step === 'confirmation'">
+      <div class="step-circle">
+        @if (step === 'confirmation') { <i class="ti ti-check"></i> } @else { 1 }
+      </div>
+      <span>Détails</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" [class.active]="step === 'confirmation'">
+      <div class="step-circle">2</div>
+      <span>Confirmation</span>
+    </div>
+  </div>
+
+  <div class="transfer-card">
+
+    @if (step === 'details') {
+
+      <h2>Nouveau virement</h2>
+
+      <form [formGroup]="detailsForm" (ngSubmit)="submitDetails()">
+
+        <label>Compte source</label>
+        <select formControlName="sourceAccountId" (change)="onAccountChange()" class="select-account">
+          @for (account of accounts; track account.id) {
+            <option [value]="account.id">
+              {{ account.type === 'COURANT' ? 'Compte courant' : 'Compte épargne' }} — {{ account.balance | number:'1.3-3' }} DT
+            </option>
+          }
+        </select>
+
+        @if (selectedAccount) {
+          <div class="account-preview">
+            <div>
+              <p class="account-preview-type">{{ selectedAccount.type === 'COURANT' ? 'Compte courant' : 'Compte épargne' }}</p>
+              <p class="account-preview-number">{{ selectedAccount.accountNumber }}</p>
+            </div>
+            <p class="account-preview-balance">{{ selectedAccount.balance | number:'1.3-3' }} DT</p>
+          </div>
+        }
+
+        <label>Compte destinataire (RIB)</label>
+        <input
+          type="text"
+          formControlName="destinationAccountNumber"
+          placeholder="07 807 XXXXXXXXXXXXX XX"
+          class="rib-input"
+          [class.input-error]="destinationControl?.invalid && destinationControl?.touched"
+        />
+        @if (destinationControl?.invalid && destinationControl?.touched) {
+          <p class="field-error">Le RIB du destinataire est obligatoire.</p>
+        }
+
+        <label>Montant</label>
+        <div class="amount-wrapper">
+          <input
+            type="number"
+            step="0.001"
+            formControlName="amount"
+            placeholder="0,000"
+            class="amount-input"
+            [class.input-error]="amountControl?.invalid && amountControl?.touched"
+          />
+          <span class="amount-suffix">DT</span>
+        </div>
+        @if (amountControl?.invalid && amountControl?.touched) {
+          <p class="field-error">Entrez un montant valide.</p>
+        }
+
+        <label>Motif (optionnel)</label>
+        <input type="text" formControlName="label" placeholder="Ex: Loyer mensuel" />
+
+        @if (errorMessage) {
+          <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ errorMessage }}</div>
+        }
+
+        <button type="submit" class="btn-submit" [disabled]="loading">
+          @if (loading) { <span class="spinner"></span> Envoi en cours... }
+          @else { Continuer <i class="ti ti-arrow-right"></i> }
+        </button>
+      </form>
+    }
+
+    @if (step === 'confirmation') {
+
+      <button class="back-link" (click)="backToDetails()">
+        <i class="ti ti-arrow-left"></i> Modifier les détails
+      </button>
+
+      <h2>Confirmation du virement</h2>
+      <p class="confirmation-subtitle">
+        Un code de vérification a été envoyé par email. Saisissez-le pour valider le virement.
+      </p>
+
+      @if (successMessage) {
+        <div class="alert-success"><i class="ti ti-circle-check"></i> {{ successMessage }}</div>
+      } @else {
+        <form [formGroup]="otpForm" (ngSubmit)="submitConfirmation()">
+
+          <label>Code de vérification</label>
+          <input
+            type="text"
+            inputmode="numeric"
+            maxlength="6"
+            formControlName="otpCode"
+            placeholder="123456"
+            class="otp-input"
+            [class.input-error]="otpControl?.invalid && otpControl?.touched"
+            autocomplete="one-time-code"
+          />
+          @if (otpControl?.invalid && otpControl?.touched) {
+            <p class="field-error">Le code doit contenir 6 chiffres.</p>
+          }
+
+          @if (errorMessage) {
+            <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ errorMessage }}</div>
+          }
+
+          <button type="submit" class="btn-submit" [disabled]="loading">
+            @if (loading) { <span class="spinner"></span> Vérification... }
+            @else { Valider le virement <i class="ti ti-check"></i> }
+          </button>
+        </form>
+      }
+    }
+  </div>
+</div>
