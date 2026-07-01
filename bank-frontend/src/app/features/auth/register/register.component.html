@@ -1,0 +1,186 @@
+<div class="login-page">
+
+  <div class="login-form-panel">
+
+    <div class="brand">
+      <svg width="40" height="40" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="46" height="46" rx="14" fill="#006241"/>
+        <path d="M12 34V12H19L24 23L29 12H34V34H29V20L24 30L19 20V34H12Z" fill="#FFFFFF"/>
+      </svg>
+      <div class="brand-text">
+        <span class="brand-name">AMMEN BANK</span>
+        <span class="brand-tagline">Prendre de l'avance</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="form-header">
+        <h1>Créer un compte</h1>
+        <p class="subtitle">Rejoignez l'espace client digital AMMEN BANK en quelques instants.</p>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+        <div class="form-row">
+          <div class="input-group form-col">
+            <label for="firstName">Prénom</label>
+            <div class="input-wrapper">
+              <i class="ti ti-user input-icon"></i>
+              <input
+                id="firstName"
+                type="text"
+                formControlName="firstName"
+                placeholder="Mohamed"
+                [class.input-error]="firstNameControl?.invalid && firstNameControl?.touched"
+              />
+            </div>
+            @if (firstNameControl?.invalid && firstNameControl?.touched) {
+              <p class="field-error"><i class="ti ti-alert-circle"></i> Le prénom est obligatoire.</p>
+            }
+          </div>
+
+          <div class="input-group form-col">
+            <label for="lastName">Nom</label>
+            <div class="input-wrapper">
+              <i class="ti ti-user input-icon"></i>
+              <input
+                id="lastName"
+                type="text"
+                formControlName="lastName"
+                placeholder="Ben Salah"
+                [class.input-error]="lastNameControl?.invalid && lastNameControl?.touched"
+              />
+            </div>
+            @if (lastNameControl?.invalid && lastNameControl?.touched) {
+              <p class="field-error"><i class="ti ti-alert-circle"></i> Le nom est obligatoire.</p>
+            }
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label for="email">Adresse email</label>
+          <div class="input-wrapper">
+            <i class="ti ti-mail input-icon"></i>
+            <input
+              id="email"
+              type="email"
+              formControlName="email"
+              placeholder="client@ammen.tn"
+              [class.input-error]="emailControl?.invalid && emailControl?.touched"
+            />
+          </div>
+          @if (emailControl?.invalid && emailControl?.touched) {
+            <p class="field-error"><i class="ti ti-alert-circle"></i> Adresse email requise ou invalide.</p>
+          }
+        </div>
+
+        <div class="input-group">
+          <label for="password">Code confidentiel</label>
+          <div class="password-field">
+            <div class="input-wrapper">
+              <i class="ti ti-lock input-icon"></i>
+              <input
+                id="password"
+                [type]="showPassword ? 'text' : 'password'"
+                formControlName="password"
+                placeholder="••••••••"
+                [class.input-error]="passwordControl?.invalid && passwordControl?.touched"
+              />
+            </div>
+            <i
+              class="ti toggle-password-icon"
+              [class.ti-eye]="!showPassword"
+              [class.ti-eye-off]="showPassword"
+              (click)="togglePassword()"
+            ></i>
+          </div>
+          @if (passwordControl?.invalid && passwordControl?.touched) {
+            <p class="field-error"><i class="ti ti-alert-circle"></i> Au moins 8 caractères requis.</p>
+          }
+        </div>
+
+        <div class="input-group">
+          <label for="confirmPassword">Confirmer le code confidentiel</label>
+          <div class="password-field">
+            <div class="input-wrapper">
+              <i class="ti ti-lock input-icon"></i>
+              <input
+                id="confirmPassword"
+                [type]="showConfirmPassword ? 'text' : 'password'"
+                formControlName="confirmPassword"
+                placeholder="••••••••"
+                [class.input-error]="(confirmPasswordControl?.invalid || passwordsMismatch) && confirmPasswordControl?.touched"
+              />
+            </div>
+            <i
+              class="ti toggle-password-icon"
+              [class.ti-eye]="!showConfirmPassword"
+              [class.ti-eye-off]="showConfirmPassword"
+              (click)="toggleConfirmPassword()"
+            ></i>
+          </div>
+          @if (confirmPasswordControl?.invalid && confirmPasswordControl?.touched) {
+            <p class="field-error"><i class="ti ti-alert-circle"></i> La confirmation est obligatoire.</p>
+          } @else if (passwordsMismatch) {
+            <p class="field-error"><i class="ti ti-alert-circle"></i> Les codes confidentiels ne correspondent pas.</p>
+          }
+        </div>
+
+        @if (errorMessage) {
+          <div class="alert-error">
+            <i class="ti ti-shield-alert"></i>
+            <span>{{ errorMessage }}</span>
+          </div>
+        }
+
+        @if (successMessage) {
+          <div class="alert-success">
+            <i class="ti ti-circle-check"></i>
+            <span>{{ successMessage }}</span>
+          </div>
+        }
+
+        <button type="submit" class="btn-submit" [disabled]="loading || !!successMessage">
+          @if (loading) {
+            <span class="spinner"></span> Création en cours...
+          } @else {
+            Créer mon compte <i class="ti ti-arrow-right"></i>
+          }
+        </button>
+
+        <div class="login-link-row">
+          <span>Vous avez déjà un compte ?</span>
+          <a routerLink="/login">Se connecter</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="security-notice">
+      <i class="ti ti-lock-check"></i>
+      <span>Connexion sécurisée — AMMEN NET</span>
+    </div>
+  </div>
+
+  <div class="illustration-panel">
+    <div class="background-pattern"></div>
+
+    <div class="hero-content">
+      <div class="badge-premium">AMMEN FIRST</div>
+      <h2>Rejoignez la banque 100% digitale, <br><span class="highlight">en quelques clics.</span></h2>
+      <p>Ouvrez votre compte en ligne et profitez immédiatement de nos services numériques : virements, épargne et bien plus.</p>
+
+      <div class="banking-preview-card">
+        <div class="card-brand">
+          <span class="card-type">AMMEN FIRST</span>
+          <i class="ti ti-wifi"></i>
+        </div>
+        <div class="card-chip"></div>
+        <div class="card-number">•••• •••• •••• 2026</div>
+        <div class="card-footer">
+          <div class="card-holder">NOUVEAU CLIENT</div>
+          <div class="card-expiry">12/30</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

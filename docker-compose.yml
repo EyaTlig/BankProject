@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+
+  mysql-auth:
+    image: mysql:8.0
+    container_name: mysql-auth
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: auth_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - auth_data:/var/lib/mysql
+    networks:
+      - bank-network
+
+  mysql-account:
+    image: mysql:8.0
+    container_name: mysql-account
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: account_db
+    ports:
+      - "3308:3306"
+    volumes:
+      - account_data:/var/lib/mysql
+    networks:
+      - bank-network
+
+  mysql-transfer:
+    image: mysql:8.0
+    container_name: mysql-transfer
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: transfer_db
+    ports:
+      - "3309:3306"
+    volumes:
+      - transfer_data:/var/lib/mysql
+    networks:
+      - bank-network
+
+  mysql-credit:
+    image: mysql:8.0
+    container_name: mysql-credit
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: credit_db
+    ports:
+      - "3310:3306"
+    volumes:
+      - credit_data:/var/lib/mysql
+    networks:
+      - bank-network
+
+  mysql-admin:
+    image: mysql:8.0
+    container_name: mysql-admin
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: admin_db
+    ports:
+      - "3311:3306"
+    volumes:
+      - admin_data:/var/lib/mysql
+    networks:
+      - bank-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    restart: always
+    environment:
+      PMA_ARBITRARY: 1
+    ports:
+      - "8086:80"
+    networks:
+      - bank-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - bank-network
+
+networks:
+  bank-network:
+    driver: bridge
+
+volumes:
+  auth_data:
+  account_data:
+  transfer_data:
+  credit_data:
+  admin_data:

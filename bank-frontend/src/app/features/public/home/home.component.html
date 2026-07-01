@@ -1,0 +1,253 @@
+<div class="home">
+
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="nav-brand" routerLink="/">
+        <img src="/ammenlogo.jfif" alt="AMEN BANK Logo" class="brand-logo" />
+        <span>AMMEN BANK <small class="brand-badge">Digital</small></span>
+      </a>
+
+      <nav class="nav-links">
+        <a href="#services">Services</a>
+        <a href="#simulateur">Simulateur</a>
+        <a href="#securite">Sécurité</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a routerLink="/login" class="btn-ghost">Se connecter</a>
+        <a routerLink="/register" class="btn-solid">Ouvrir un compte</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+
+      <div class="hero-copy reveal">
+        <span class="eyebrow"><i class="ti ti-circle-filled text-dot"></i> Banque 100% en ligne</span>
+        <h1>Votre argent, <br><span class="accent">sous parfait contrôle</span>, où que vous soyez.</h1>
+        <p class="hero-subtitle">
+          Gérez vos comptes, effectuez vos virements instantanés et simulez vos besoins de financement depuis une interface sécurisée de nouvelle génération.
+        </p>
+
+        <div class="hero-cta">
+          <a routerLink="/register" class="btn-solid btn-lg">
+            Ouvrir mon compte <i class="ti ti-arrow-right"></i>
+          </a>
+          <a href="#services" class="btn-outline btn-lg">Découvrir l'univers</a>
+        </div>
+
+        <div class="trust-row">
+          <div class="trust-item">
+            <i class="ti ti-shield-lock"></i>
+            <span>Authentification 2FA</span>
+          </div>
+          <div class="trust-item">
+            <i class="ti ti-lock-check"></i>
+            <span>Chiffrement AES-256</span>
+          </div>
+          <div class="trust-item">
+            <i class="ti ti-building-bank"></i>
+            <span>RIB Tunisien Officiel</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-visual reveal" id="simulateur">
+        <div class="simulator-card">
+          <div class="simulator-header">
+            <div>
+              <span class="simulator-label">Simulateur interactif</span>
+              <p class="simulator-sublabel">Estimez votre crédit instantanément</p>
+            </div>
+            <div class="icon-wrapper">
+              <i class="ti ti-calculator"></i>
+            </div>
+          </div>
+
+          <div class="simulator-field">
+            <div class="simulator-field-head">
+              <label for="amount">Montant souhaité</label>
+              <span class="simulator-value">{{ amount() | number:'1.0-0' }} DT</span>
+            </div>
+            <input
+              id="amount"
+              type="range"
+              [min]="minAmount"
+              [max]="maxAmount"
+              step="500"
+              [value]="amount()"
+              (input)="onAmountChange($any($event.target).value)"
+              class="modern-slider"
+            />
+            <div class="simulator-range-bounds">
+              <span>{{ minAmount | number:'1.0-0' }} DT</span>
+              <span>{{ maxAmount | number:'1.0-0' }} DT</span>
+            </div>
+          </div>
+
+          <div class="simulator-field">
+            <div class="simulator-field-head">
+              <label for="duration">Durée du crédit</label>
+              <span class="simulator-value">{{ duration() }} mois</span>
+            </div>
+            <input
+              id="duration"
+              type="range"
+              [min]="minDuration"
+              [max]="maxDuration"
+              step="6"
+              [value]="duration()"
+              (input)="onDurationChange($any($event.target).value)"
+              class="modern-slider"
+            />
+            <div class="simulator-range-bounds">
+              <span>{{ minDuration }} mois</span>
+              <span>{{ maxDuration }} mois</span>
+            </div>
+          </div>
+
+          <div class="simulator-result">
+            <div class="simulator-result-main">
+              <span class="result-label">Mensualité estimée (TTC)</span>
+              <span class="result-value">
+                {{ monthlyPayment() | number:'1.0-2' }} <span class="result-unit">DT/mois</span>
+              </span>
+            </div>
+            <div class="simulator-result-details">
+              <div>
+                <span class="detail-label">Remboursement</span>
+                <span class="detail-value">{{ totalCost() | number:'1.0-0' }} DT</span>
+              </div>
+              <div>
+                <span class="detail-label">Intérêts</span>
+                <span class="detail-value">{{ totalInterest() | number:'1.0-0' }} DT</span>
+              </div>
+              <div>
+                <span class="detail-label">Taux Fixe</span>
+                <span class="detail-value-badge">{{ annualRate }} %</span>
+              </div>
+            </div>
+          </div>
+
+          <a routerLink="/register" class="simulator-cta">
+            Obtenir un accord de principe <i class="ti ti-arrow-right"></i>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="services" id="services">
+    <div class="section-inner">
+      <span class="eyebrow eyebrow-center">Vos fonctionnalités</span>
+      <h2 class="section-title">Une banque complète au creux de votre main</h2>
+
+      <div class="services-grid">
+        <div class="service-card reveal">
+          <div class="service-icon"><i class="ti ti-credit-card"></i></div>
+          <h3>Soldes & Historique 24/7</h3>
+          <p>Consultez votre solde mis à jour en direct et analysez vos dépenses automatiquement par catégories.</p>
+        </div>
+
+        <div class="service-card reveal">
+          <div class="service-icon"><i class="ti ti-arrows-exchange"></i></div>
+          <h3>Virements Instantanés</h3>
+          <p>Envoyez des fonds de manière sécurisée, planifiez vos virements permanents ou intégrez un fichier CSV.</p>
+        </div>
+
+        <div class="service-card reveal">
+          <div class="service-icon"><i class="ti ti-receipt-2"></i></div>
+          <h3>Financement Agile</h3>
+          <p>Simulez et suivez l'avancement de votre dossier de crédit en ligne, sans vous déplacer en agence.</p>
+        </div>
+
+        <div class="service-card reveal">
+          <div class="service-icon"><i class="ti ti-message-chatbot"></i></div>
+          <h3>Assistant Virtuel IA</h3>
+          <p>Un conseiller disponible à chaque instant pour répondre à vos blocages et vous guider.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="security" id="securite">
+    <div class="section-inner security-inner">
+      <div class="security-copy reveal">
+        <span class="eyebrow eyebrow-light">Normes de Sécurité</span>
+        <h2 class="section-title section-title-light">Une protection bancaire de niveau militaire</h2>
+        <p class="security-subtitle">
+          Chaque transaction est protégée. Vos données sensibles font l'objet d'un chiffrement lourd et les sessions se ferment automatiquement en cas d'absence.
+        </p>
+      </div>
+
+      <div class="security-grid reveal">
+        <div class="security-item">
+          <i class="ti ti-shield-lock"></i>
+          <div>
+            <h4>Double Authentification (2FA)</h4>
+            <p>Code de vérification dynamique à usage unique requis pour valider chaque accès critique.</p>
+          </div>
+        </div>
+        <div class="security-item">
+          <i class="ti ti-lock-check"></i>
+          <div>
+            <h4>Protocoles TLS / SSL</h4>
+            <p>Toutes les requêtes de données entre votre navigateur et notre serveur sont cryptées de bout en bout.</p>
+          </div>
+        </div>
+        <div class="security-item">
+          <i class="ti ti-clock-hour-4"></i>
+          <div>
+            <h4>Temporisation Intelligente</h4>
+            <p>Déconnexion automatisée immédiate après une courte période d’inactivité détectée.</p>
+          </div>
+        </div>
+        <div class="security-item">
+          <i class="ti ti-file-check"></i>
+          <div>
+            <h4>Audit & Logs de sécurité</h4>
+            <p>Historique immuable de chaque événement pour assurer une traçabilité parfaite.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="section-inner footer-inner">
+      <div class="footer-brand">
+        <div class="nav-brand">
+          <img src="/ammenlogo.jfif" alt="AMEN BANK Logo" class="brand-logo" />
+          <span>AMMEN BANK</span>
+        </div>
+        <p>Prendre de l'avance, en toute sérénité et sécurité.</p>
+      </div>
+
+      <div class="footer-col">
+        <h5>Produits</h5>
+        <a href="#services">Comptes Digitaux</a>
+        <a href="#services">Virements</a>
+        <a href="#simulateur">Crédit en ligne</a>
+      </div>
+
+      <div class="footer-col">
+        <h5>Sécurité</h5>
+        <a href="#securite">Espace Conformité</a>
+        <a href="#securite">Confidentialité</a>
+      </div>
+
+      <div class="footer-col">
+        <h5>Mon Compte</h5>
+        <a routerLink="/login">Se connecter</a>
+        <a routerLink="/register">Devenir client</a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>© {{ currentYear }} AMMEN BANK </span>
+    </div>
+  </footer>
+
+</div>

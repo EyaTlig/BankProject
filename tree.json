@@ -1,0 +1,968 @@
+{
+  "name": "bank-platform",
+  "path": "c:\\Users\\Eya\\IdeaProjects\\bank-platform",
+  "type": "directory",
+  "children": [
+    {
+      "name": ".mvn",
+      "type": "folder",
+      "children": [
+        {
+          "name": "wrapper",
+          "type": "folder",
+          "children": [
+            {
+              "name": "maven-wrapper.properties",
+              "type": "file"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bank-backend",
+      "type": "folder",
+      "children": [
+        {
+          "name": "account-service",
+          "type": "folder",
+          "children": [
+            {
+              "name": ".mvn",
+              "type": "folder",
+              "children": [
+                {
+                  "name": "wrapper",
+                  "type": "folder",
+                  "children": [
+                    {
+                      "name": "maven-wrapper.properties",
+                      "type": "file"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "src",
+              "type": "folder",
+              "children": [
+                {
+                  "name": "main",
+                  "type": "folder",
+                  "children": [
+                    {
+                      "name": "java",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "tn",
+                          "type": "folder",
+                          "children": [
+                            {
+                              "name": "bank",
+                              "type": "folder",
+                              "children": [
+                                {
+                                  "name": "accountservice",
+                                  "type": "folder",
+                                  "children": [
+                                    {
+                                      "name": "application",
+                                      "type": "folder",
+                                      "children": [
+                                        {
+                                          "name": "AccountResponse.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "AccountService.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "BulkTransferItemResult.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "BulkTransferService.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "ConfirmBulkTransferRequest.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "ConfirmBulkTransferResponse.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "ConfirmTransferRequest.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "ConfirmTransferResponse.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "CreateRecurringTransferRequest.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "InitiateBulkTransferResponse.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "InitiateTransferRequest.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "InitiateTransferResponse.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "RecurringTransferResponse.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "RecurringTransferService.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "TransactionResponse.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "TransferService.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "UserCreatedEvent.java",
+                                          "type": "file"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "name": "domain",
+                                      "type": "folder",
+                                      "children": [
+                                        {
+                                          "name": "Account.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "AccountType.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "BulkTransfer.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "BulkTransferItem.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "BulkTransferItemStatus.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "Client.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "RecurringFrequency.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "RecurringTransfer.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "RecurringTransferStatus.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "Transaction.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "TransactionType.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "Transfer.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "TransferStatus.java",
+                                          "type": "file"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "name": "infrastructure",
+                                      "type": "folder",
+                                      "children": [
+                                        {
+                                          "name": "AccountRepository.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "BulkTransferRepository.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "ClientRepository.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "JwtAuthFilter.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "JwtService.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "RabbitMQConfig.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "RecurringTransferRepository.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "RecurringTransferScheduler.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "SecurityConfig.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "TransactionRepository.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "TransferOtpService.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "TransferRepository.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "UserCreatedListener.java",
+                                          "type": "file"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "name": "presentation",
+                                      "type": "folder",
+                                      "children": [
+                                        {
+                                          "name": "AccountController.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "BulkTransferController.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "RecurringTransferController.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "TransferController.java",
+                                          "type": "file"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "name": "AccountServiceApplication.java",
+                                      "type": "file"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "resources",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "static",
+                          "type": "folder"
+                        },
+                        {
+                          "name": "templates",
+                          "type": "folder"
+                        },
+                        {
+                          "name": "application.properties",
+                          "type": "file"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "test",
+                  "type": "folder",
+                  "children": [
+                    {
+                      "name": "java",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "tn",
+                          "type": "folder",
+                          "children": [
+                            {
+                              "name": "bank",
+                              "type": "folder",
+                              "children": [
+                                {
+                                  "name": "accountservice",
+                                  "type": "folder",
+                                  "children": [
+                                    {
+                                      "name": "AccountServiceApplicationTests.java",
+                                      "type": "file"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": ".gitattributes",
+              "type": "file"
+            },
+            {
+              "name": ".gitignore",
+              "type": "file"
+            },
+            {
+              "name": "mvnw",
+              "type": "file"
+            },
+            {
+              "name": "mvnw.cmd",
+              "type": "file"
+            },
+            {
+              "name": "pom.xml",
+              "type": "file"
+            }
+          ]
+        },
+        {
+          "name": "auth-service",
+          "type": "folder",
+          "children": [
+            {
+              "name": ".mvn",
+              "type": "folder",
+              "children": [
+                {
+                  "name": "wrapper",
+                  "type": "folder",
+                  "children": [
+                    {
+                      "name": "maven-wrapper.properties",
+                      "type": "file"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "src",
+              "type": "folder",
+              "children": [
+                {
+                  "name": "main",
+                  "type": "folder",
+                  "children": [
+                    {
+                      "name": "java",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "tn",
+                          "type": "folder",
+                          "children": [
+                            {
+                              "name": "bank",
+                              "type": "folder",
+                              "children": [
+                                {
+                                  "name": "authservice",
+                                  "type": "folder",
+                                  "children": [
+                                    {
+                                      "name": "application",
+                                      "type": "folder",
+                                      "children": [
+                                        {
+                                          "name": "AuthService.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "LoginRequest.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "LoginResponse.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "RegisterRequest.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "RegisterResponse.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "UserCreatedEvent.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "VerifyOtpRequest.java",
+                                          "type": "file"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "name": "domain",
+                                      "type": "folder",
+                                      "children": [
+                                        {
+                                          "name": "Role.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "User.java",
+                                          "type": "file"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "name": "infrastructure",
+                                      "type": "folder",
+                                      "children": [
+                                        {
+                                          "name": "JwtAuthFilter.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "JwtService.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "OtpService.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "RabbitMQConfig.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "SecurityConfig.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "UserEventPublisher.java",
+                                          "type": "file"
+                                        },
+                                        {
+                                          "name": "UserRepository.java",
+                                          "type": "file"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "name": "presentation",
+                                      "type": "folder",
+                                      "children": [
+                                        {
+                                          "name": "AuthController.java",
+                                          "type": "file"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "name": "AuthServiceApplication.java",
+                                      "type": "file"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "resources",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "static",
+                          "type": "folder"
+                        },
+                        {
+                          "name": "templates",
+                          "type": "folder"
+                        },
+                        {
+                          "name": "application.properties",
+                          "type": "file"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "test",
+                  "type": "folder",
+                  "children": [
+                    {
+                      "name": "java",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "tn",
+                          "type": "folder",
+                          "children": [
+                            {
+                              "name": "bank",
+                              "type": "folder",
+                              "children": [
+                                {
+                                  "name": "authservice",
+                                  "type": "folder",
+                                  "children": [
+                                    {
+                                      "name": "AuthServiceApplicationTests.java",
+                                      "type": "file"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": ".gitattributes",
+              "type": "file"
+            },
+            {
+              "name": ".gitignore",
+              "type": "file"
+            },
+            {
+              "name": "mvnw",
+              "type": "file"
+            },
+            {
+              "name": "mvnw.cmd",
+              "type": "file"
+            },
+            {
+              "name": "pom.xml",
+              "type": "file"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bank-frontend",
+      "type": "folder",
+      "children": [
+        {
+          "name": ".angular",
+          "type": "folder"
+        },
+        {
+          "name": "public",
+          "type": "folder",
+          "children": [
+            {
+              "name": "ammenlogo.jfif",
+              "type": "file"
+            },
+            {
+              "name": "favicon.ico",
+              "type": "file"
+            }
+          ]
+        },
+        {
+          "name": "src",
+          "type": "folder",
+          "children": [
+            {
+              "name": "app",
+              "type": "folder",
+              "children": [
+                {
+                  "name": "core",
+                  "type": "folder",
+                  "children": [
+                    {
+                      "name": "guards",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "auth.guard.ts",
+                          "type": "file"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "interceptors",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "auth.interceptor.ts",
+                          "type": "file"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "models",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "account.model.ts",
+                          "type": "file"
+                        },
+                        {
+                          "name": "auth.model.ts",
+                          "type": "file"
+                        },
+                        {
+                          "name": "recurring-transfer.model.ts",
+                          "type": "file"
+                        },
+                        {
+                          "name": "transfer.model.ts",
+                          "type": "file"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "services",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "account.service.ts",
+                          "type": "file"
+                        },
+                        {
+                          "name": "auth.service.ts",
+                          "type": "file"
+                        },
+                        {
+                          "name": "recurring-transfer.service.ts",
+                          "type": "file"
+                        },
+                        {
+                          "name": "transfer.service.ts",
+                          "type": "file"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "features",
+                  "type": "folder",
+                  "children": [
+                    {
+                      "name": "accounts",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "accounts.component.css",
+                          "type": "file"
+                        },
+                        {
+                          "name": "accounts.component.html",
+                          "type": "file"
+                        },
+                        {
+                          "name": "accounts.component.ts",
+                          "type": "file"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "auth",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "login",
+                          "type": "folder",
+                          "children": [
+                            {
+                              "name": "Login.component.html",
+                              "type": "file"
+                            },
+                            {
+                              "name": "login.component.css",
+                              "type": "file"
+                            },
+                            {
+                              "name": "login.component.ts",
+                              "type": "file"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "verify-otp",
+                          "type": "folder",
+                          "children": [
+                            {
+                              "name": "verify-otp.component.css",
+                              "type": "file"
+                            },
+                            {
+                              "name": "verify-otp.component.html",
+                              "type": "file"
+                            },
+                            {
+                              "name": "verify-otp.component.ts",
+                              "type": "file"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "dashboard",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "dashboard.component.css",
+                          "type": "file"
+                        },
+                        {
+                          "name": "dashboard.component.html",
+                          "type": "file"
+                        },
+                        {
+                          "name": "dashboard.component.ts",
+                          "type": "file"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "recurring-transfers",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "recurring-transfer.component.css",
+                          "type": "file"
+                        },
+                        {
+                          "name": "recurring-transfer.component.html",
+                          "type": "file"
+                        },
+                        {
+                          "name": "recurring-transfer.component.ts",
+                          "type": "file"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "transfers",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "transfer.component.css",
+                          "type": "file"
+                        },
+                        {
+                          "name": "transfer.component.html",
+                          "type": "file"
+                        },
+                        {
+                          "name": "transfer.component.ts",
+                          "type": "file"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "shared",
+                  "type": "folder",
+                  "children": [
+                    {
+                      "name": "layout",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "layout.component.css",
+                          "type": "file"
+                        },
+                        {
+                          "name": "layout.component.html",
+                          "type": "file"
+                        },
+                        {
+                          "name": "layout.component.ts",
+                          "type": "file"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "styles",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "name": "Variables.css",
+                          "type": "file"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "app.config.ts",
+                  "type": "file"
+                },
+                {
+                  "name": "app.css",
+                  "type": "file"
+                },
+                {
+                  "name": "app.html",
+                  "type": "file"
+                },
+                {
+                  "name": "app.routes.ts",
+                  "type": "file"
+                },
+                {
+                  "name": "app.spec.ts",
+                  "type": "file"
+                },
+                {
+                  "name": "app.ts",
+                  "type": "file"
+                }
+              ]
+            },
+            {
+              "name": "index.html",
+              "type": "file"
+            },
+            {
+              "name": "main.ts",
+              "type": "file"
+            },
+            {
+              "name": "styles.css",
+              "type": "file"
+            }
+          ]
+        },
+        {
+          "name": ".editorconfig",
+          "type": "file"
+        },
+        {
+          "name": ".gitignore",
+          "type": "file"
+        },
+        {
+          "name": "README.md",
+          "type": "file"
+        },
+        {
+          "name": "angular.json",
+          "type": "file"
+        },
+        {
+          "name": "package-lock.json",
+          "type": "file"
+        },
+        {
+          "name": "package.json",
+          "type": "file"
+        },
+        {
+          "name": "tsconfig.app.json",
+          "type": "file"
+        },
+        {
+          "name": "tsconfig.json",
+          "type": "file"
+        },
+        {
+          "name": "tsconfig.spec.json",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "name": ".gitattributes",
+      "type": "file"
+    },
+    {
+      "name": ".gitignore",
+      "type": "file"
+    },
+    {
+      "name": "docker-compose.yml",
+      "type": "file"
+    },
+    {
+      "name": "gitignore",
+      "type": "file"
+    },
+    {
+      "name": "mvnw",
+      "type": "file"
+    },
+    {
+      "name": "mvnw.cmd",
+      "type": "file"
+    },
+    {
+      "name": "pom.xml",
+      "type": "file"
+    }
+  ],
+  "metadata": {
+    "generated": "2026-06-30T13:28:35.237Z",
+    "generator": "FileTree Pro Extension",
+    "version": "0.2.0",
+    "showIcons": false,
+    "maxDepth": 10
+  }
+}
