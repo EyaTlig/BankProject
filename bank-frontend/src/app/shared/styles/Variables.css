@@ -1,0 +1,51 @@
+:root {
+  --color-green-light: #00C46A;
+  --color-green: #00954C;
+  --color-green-dark: #007A3D;
+  --color-blue: #1B6FB8;
+  --color-blue-light: #3B9FE8;
+
+  --color-bg: #FAFAF8;
+  --color-bg-soft: #F0FAF4;
+  --color-surface: #FFFFFF;
+  --color-border: #E2E8F0;
+
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94A3B8;
+
+  --color-warning-bg: #FFFBEB;
+  --color-warning-border: #FDE68A;
+  --color-warning-text: #92400E;
+  --color-warning-icon: #F59E0B;
+
+  --color-danger: #DC2626;
+  --color-danger-bg: #FEF2F2;
+
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --shadow-button: 0 8px 20px -8px rgba(0, 149, 76, 0.5);
+  --shadow-card: 0 20px 40px -16px rgba(15, 23, 42, 0.18);
+  --shadow-card-strong: 0 24px 48px -16px rgba(15, 23, 42, 0.22);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  margin: 0;
+}

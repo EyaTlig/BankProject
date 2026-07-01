@@ -1,0 +1,117 @@
+<div class="login-page">
+
+  <div class="login-form-panel">
+
+    <div class="brand">
+      <svg width="40" height="40" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="46" height="46" rx="14" fill="#006241"/>
+        <path d="M12 34V12H19L24 23L29 12H34V34H29V20L24 30L19 20V34H12Z" fill="#FFFFFF"/>
+      </svg>
+      <div class="brand-text">
+        <span class="brand-name">AMEN BANK</span>
+        <span class="brand-tagline">Prendre de l'avance</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="form-header">
+        <h1>Espace Client Sécurisé</h1>
+        <p class="subtitle">Accédez à vos comptes et services numériques en toute sérénité.</p>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+        <div class="input-group">
+          <label for="email">Identifiant ou adresse email</label>
+          <div class="input-wrapper">
+            <i class="ti ti-user input-icon"></i>
+            <input
+              id="email"
+              type="email"
+              formControlName="email"
+              placeholder="client@amen.tn"
+              [class.input-error]="emailControl?.invalid && emailControl?.touched"
+            />
+          </div>
+          @if (emailControl?.invalid && emailControl?.touched) {
+            <p class="field-error"><i class="ti ti-alert-circle"></i> Identifiant requis ou invalide.</p>
+          }
+        </div>
+
+        <div class="input-group">
+          <label for="password">Code confidentiel</label>
+          <div class="password-field">
+            <div class="input-wrapper">
+              <i class="ti ti-lock input-icon"></i>
+              <input
+                id="password"
+                [type]="showPassword ? 'text' : 'password'"
+                formControlName="password"
+                placeholder="••••••••"
+                [class.input-error]="passwordControl?.invalid && passwordControl?.touched"
+              />
+            </div>
+            <i
+              class="ti toggle-password-icon"
+              [class.ti-eye]="!showPassword"
+              [class.ti-eye-off]="showPassword"
+              (click)="togglePassword()"
+            ></i>
+          </div>
+          @if (passwordControl?.invalid && passwordControl?.touched) {
+            <p class="field-error"><i class="ti ti-alert-circle"></i> Le code confidentiel est obligatoire.</p>
+          }
+        </div>
+
+        <div class="form-actions">
+          <div class="forgot-password">
+            <a href="#">Code oublié ou bloqué ?</a>
+          </div>
+        </div>
+
+        @if (errorMessage) {
+          <div class="alert-error">
+            <i class="ti ti-shield-alert"></i>
+            <span>{{ errorMessage }}</span>
+          </div>
+        }
+
+        <button type="submit" class="btn-submit" [disabled]="loading">
+          @if (loading) {
+            <span class="spinner"></span> Connexion en cours...
+          } @else {
+            Se connecter <i class="ti ti-arrow-right"></i>
+          }
+        </button>
+      </form>
+    </div>
+
+    <div class="security-notice">
+      <i class="ti ti-lock-check"></i>
+      <span>Connexion sécurisée SSL — AMEN NET</span>
+    </div>
+  </div>
+
+  <div class="illustration-panel">
+    <div class="background-pattern"></div>
+
+    <div class="hero-content">
+      <div class="badge-premium">AMEN FIRST</div>
+      <h2>La banque 100% digitale, <br><span class="highlight">partout avec vous.</span></h2>
+      <p>Suivez vos transactions, gérez vos cartes Premium et accédez à vos crédits instantanés depuis notre nouvel écosystème.</p>
+
+      <div class="banking-preview-card">
+        <div class="card-brand">
+          <span class="card-type">AMEN FIRST</span>
+          <i class="ti ti-wifi"></i>
+        </div>
+        <div class="card-chip"></div>
+        <div class="card-number">•••• •••• •••• 2026</div>
+        <div class="card-footer">
+          <div class="card-holder">AMEN CUSTOMER</div>
+          <div class="card-expiry">12/30</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

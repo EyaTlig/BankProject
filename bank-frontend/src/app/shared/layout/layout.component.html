@@ -1,0 +1,38 @@
+<div class="app-shell">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <svg width="32" height="32" viewBox="0 0 46 46" fill="none">
+        <rect width="46" height="46" rx="14" fill="#a3e635"/>
+        <path d="M12 34V12H19L24 23L29 12H34V34H29V20L24 30L19 20V34H12Z" fill="#030d08"/>
+      </svg>
+      <span>AMEN BANK</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+        <i class="ti ti-layout-dashboard"></i> Tableau de bord
+      </a>
+      <a routerLink="/accounts" routerLinkActive="active" class="nav-item">
+        <i class="ti ti-credit-card"></i> Mes comptes
+      </a>
+      <a routerLink="/transfers" routerLinkActive="active" class="nav-item">
+        <i class="ti ti-arrows-exchange"></i> Virements
+      </a>
+      <a routerLink="/recurring-transfers" routerLinkActive="active" class="nav-item">
+        <i class="ti ti-repeat"></i> Permanents
+      </a>
+      <a routerLink="/credits" routerLinkActive="active" class="nav-item">
+        <i class="ti ti-receipt"></i> Crédits
+      </a>
+    </nav>
+
+    <button class="logout-button" (click)="logout()">
+      <i class="ti ti-logout"></i> Déconnexion
+    </button>
+  </aside>
+
+  <main class="app-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

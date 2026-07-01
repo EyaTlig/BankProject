@@ -1,0 +1,118 @@
+<div class="page-header">
+  <div>
+    <h1>Virements permanents</h1>
+    <p class="subtitle">Gérez vos paiements récurrents programmés.</p>
+  </div>
+  <button class="btn-new" (click)="openForm()">
+    <i class="ti ti-plus"></i> Nouveau
+  </button>
+</div>
+
+@if (loading) {
+  <div class="loading-state"><span class="spinner"></span> Chargement...</div>
+} @else if (recurringTransfers.length === 0) {
+  <div class="empty-state">
+    <i class="ti ti-repeat-off"></i>
+    <p>Vous n'avez aucun virement permanent programmé.</p>
+  </div>
+} @else {
+  @for (transfer of recurringTransfers; track transfer.id) {
+    <div class="transfer-row">
+      <div class="transfer-info">
+        <div class="transfer-icon">
+          <i class="ti ti-repeat"></i>
+        </div>
+        <div>
+          <p class="transfer-label">{{ transfer.label || 'Virement permanent' }}</p>
+          <p class="transfer-destination">vers {{ transfer.destinationAccountNumber }}</p>
+        </div>
+      </div>
+
+      <div class="transfer-amount-block">
+        <p class="transfer-amount">{{ transfer.amount | number:'1.3-3' }} DT</p>
+        <p class="transfer-schedule">
+          {{ frequencyLabel(transfer.frequency) }}
+          @if (transfer.status === 'ACTIVE') {
+            · Prochaine: {{ transfer.nextExecutionDate | date:'dd/MM/yyyy' }}
+          }
+        </p>
+      </div>
+
+      <span class="status-badge" [class]="transfer.status.toLowerCase()">
+        {{ statusLabel(transfer.status) }}
+      </span>
+
+      @if (transfer.status === 'ACTIVE') {
+        <button class="cancel-button" (click)="cancelTransfer(transfer.id)" title="Annuler">
+          <i class="ti ti-trash"></i>
+        </button>
+      }
+    </div>
+  }
+}
+
+@if (showForm) {
+  <div class="modal-overlay" (click)="closeForm()">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <h2>Nouveau virement permanent</h2>
+        <i class="ti ti-x" (click)="closeForm()"></i>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="submitForm()">
+
+        <label>Compte source</label>
+        <select formControlName="sourceAccountId">
+          @for (account of accounts; track account.id) {
+            <option [value]="account.id">
+              {{ account.type === 'COURANT' ? 'Compte courant' : 'Compte épargne' }} — {{ account.balance | number:'1.3-3' }} DT
+            </option>
+          }
+        </select>
+
+        <label>Compte destinataire (RIB)</label>
+        <input type="text" formControlName="destinationAccountNumber" placeholder="07 807 XXXXXXXXXXXXX XX" class="mono" />
+
+        <div class="form-row">
+          <div class="form-col">
+            <label>Montant</label>
+            <input type="number" step="0.001" formControlName="amount" placeholder="0,000" />
+          </div>
+          <div class="form-col">
+            <label>Fréquence</label>
+            <select formControlName="frequency">
+              <option value="WEEKLY">Hebdomadaire</option>
+              <option value="MONTHLY">Mensuel</option>
+              <option value="QUARTERLY">Trimestriel</option>
+              <option value="YEARLY">Annuel</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-col">
+            <label>Date de début</label>
+            <input type="date" formControlName="startDate" />
+          </div>
+          <div class="form-col">
+            <label>Date de fin (optionnel)</label>
+            <input type="date" formControlName="endDate" />
+          </div>
+        </div>
+
+        <label>Motif (optionnel)</label>
+        <input type="text" formControlName="label" placeholder="Ex: Loyer mensuel" />
+
+        @if (errorMessage) {
+          <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ errorMessage }}</div>
+        }
+
+        <button type="submit" class="btn-submit" [disabled]="formLoading">
+          @if (formLoading) { <span class="spinner"></span> Création... }
+          @else { Programmer le virement }
+        </button>
+      </form>
+    </div>
+  </div>
+}

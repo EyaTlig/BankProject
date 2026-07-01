@@ -1,0 +1,103 @@
+<div class="login-page">
+
+  <div class="login-form-panel">
+
+    <div class="brand">
+      <svg width="40" height="40" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="46" height="46" rx="14" fill="#006241"/>
+        <path d="M12 34V12H19L24 23L29 12H34V34H29V20L24 30L19 20V34H12Z" fill="#FFFFFF"/>
+      </svg>
+      <div class="brand-text">
+        <span class="brand-name">AMEN BANK</span>
+        <span class="brand-tagline">Prendre de l'avance</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="form-header">
+        <h1>Vérification en deux étapes</h1>
+        <p class="subtitle">
+          Un code à 6 chiffres a été envoyé à <strong>{{ email }}</strong>.
+          Saisissez-le ci-dessous pour accéder à votre espace.
+        </p>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+        <div class="input-group">
+          <label for="otpCode">Code de vérification</label>
+          <div class="input-wrapper">
+            <i class="ti ti-shield-lock input-icon"></i>
+            <input
+              id="otpCode"
+              type="text"
+              inputmode="numeric"
+              maxlength="6"
+              formControlName="otpCode"
+              placeholder="123456"
+              class="otp-input"
+              [class.input-error]="otpControl?.invalid && otpControl?.touched"
+              autocomplete="one-time-code"
+            />
+          </div>
+          @if (otpControl?.invalid && otpControl?.touched) {
+            <p class="field-error"><i class="ti ti-alert-circle"></i> Le code doit contenir 6 chiffres.</p>
+          }
+        </div>
+
+        @if (errorMessage) {
+          <div class="alert-error">
+            <i class="ti ti-shield-alert"></i>
+            <span>{{ errorMessage }}</span>
+          </div>
+        }
+
+        <button type="submit" class="btn-submit" [disabled]="loading">
+          @if (loading) {
+            <span class="spinner"></span> Vérification...
+          } @else {
+            Valider <i class="ti ti-arrow-right"></i>
+          }
+        </button>
+
+        <div class="resend-row">
+          <span>Vous n'avez rien reçu ?</span>
+          <a href="#">Renvoyer le code</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="security-notice">
+      <i class="ti ti-lock-check"></i>
+      <span>Connexion sécurisée SSL — AMEN NET</span>
+    </div>
+  </div>
+
+  <div class="illustration-panel">
+    <div class="background-pattern"></div>
+
+    <div class="hero-content">
+      <div class="badge-premium">SÉCURITÉ RENFORCÉE</div>
+      <h2>Votre compte, <br><span class="highlight">doublement protégé.</span></h2>
+      <p>L'authentification à deux facteurs garantit que seul vous pouvez accéder à vos comptes, même si votre mot de passe est compromis.</p>
+
+      <div class="banking-preview-card otp-preview-card">
+        <div class="card-brand">
+          <span class="card-type">CODE ENVOYÉ</span>
+          <i class="ti ti-mail"></i>
+        </div>
+        <div class="otp-boxes-preview">
+          <div class="otp-box-preview filled">{{ otpControl?.value?.[0] || '•' }}</div>
+          <div class="otp-box-preview filled">{{ otpControl?.value?.[1] || '•' }}</div>
+          <div class="otp-box-preview filled">{{ otpControl?.value?.[2] || '•' }}</div>
+          <div class="otp-box-preview">{{ otpControl?.value?.[3] || '' }}</div>
+          <div class="otp-box-preview">{{ otpControl?.value?.[4] || '' }}</div>
+          <div class="otp-box-preview">{{ otpControl?.value?.[5] || '' }}</div>
+        </div>
+        <div class="card-footer">
+          <div class="card-holder">VALIDE 5 MINUTES</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

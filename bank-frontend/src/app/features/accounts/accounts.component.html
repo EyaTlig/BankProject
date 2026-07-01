@@ -1,0 +1,81 @@
+<h1 class="page-title">Mes comptes</h1>
+
+@if (loading) {
+  <div class="loading-state"><span class="spinner"></span> Chargement de vos comptes...</div>
+} @else if (accounts.length === 0) {
+  <div class="empty-state">Vous n'avez encore aucun compte.</div>
+} @else {
+
+  <div class="accounts-row">
+    @for (account of accounts; track account.id) {
+      <div
+        class="account-card"
+        [class.selected]="selectedAccount?.id === account.id"
+        (click)="selectAccount(account)"
+      >
+        <div class="account-card-header">
+          <span>{{ account.type === 'COURANT' ? 'COMPTE COURANT' : 'COMPTE EPARGNE' }}</span>
+          <i class="ti" [class.ti-wallet]="account.type === 'COURANT'" [class.ti-pig-money]="account.type === 'EPARGNE'"></i>
+        </div>
+        <p class="account-card-balance">{{ account.balance | number:'1.3-3' }} DT</p>
+        <p class="account-card-number">{{ account.accountNumber }}</p>
+      </div>
+    }
+  </div>
+
+  <div class="history-card">
+
+    <div class="history-header">
+      <span>Historique des transactions</span>
+    </div>
+
+    <form [formGroup]="filterForm" class="filters-row">
+      <select formControlName="type">
+        <option value="">Tous les types</option>
+        <option value="VIREMENT_ENTRANT">Virement entrant</option>
+        <option value="VIREMENT_SORTANT">Virement sortant</option>
+        <option value="DEPOT">Depot</option>
+        <option value="RETRAIT">Retrait</option>
+      </select>
+
+      <input type="date" formControlName="startDate" title="Date de debut" />
+      <input type="date" formControlName="endDate" title="Date de fin" />
+      <input type="number" formControlName="minAmount" placeholder="Montant min" />
+      <input type="number" formControlName="maxAmount" placeholder="Montant max" />
+
+      <button type="button" class="reset-button" (click)="resetFilters()">
+        <i class="ti ti-filter-off"></i>
+      </button>
+    </form>
+
+    @if (transactionsLoading) {
+      <div class="loading-state-inline"><span class="spinner"></span> Chargement de l'historique...</div>
+    } @else if (filteredTransactions.length === 0) {
+      <p class="no-transactions">Aucune transaction ne correspond a ces criteres.</p>
+    } @else {
+
+      <div class="table-header">
+        <span>Operation</span>
+        <span>Date</span>
+        <span class="align-right">Montant</span>
+        <span class="align-right">Solde</span>
+      </div>
+
+      @for (transaction of filteredTransactions; track transaction.id) {
+        <div class="table-row">
+          <div class="table-cell-operation">
+            <div class="transaction-icon" [class.credit]="isCredit(transaction.type)">
+              <i class="ti" [class.ti-arrow-down-left]="isCredit(transaction.type)" [class.ti-arrow-up-right]="!isCredit(transaction.type)"></i>
+            </div>
+            <span>{{ typeLabel(transaction.type) }}</span>
+          </div>
+          <span class="table-cell-date">{{ transaction.date | date:'dd/MM/yyyy' }}</span>
+          <span class="table-cell-amount" [class.credit]="isCredit(transaction.type)">
+            {{ isCredit(transaction.type) ? '+' : '-' }}{{ transaction.amount | number:'1.3-3' }} DT
+          </span>
+          <span class="table-cell-balance">{{ transaction.balanceAfter | number:'1.3-3' }}</span>
+        </div>
+      }
+    }
+  </div>
+}
