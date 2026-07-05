@@ -1,7 +1,10 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule, registerLocaleData } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import localeFr from '@angular/common/locales/fr';
+import { Subject, Subscription, debounceTime, switchMap, catchError, of } from 'rxjs';
+import { CreditService } from '../../../core/services/credit.service';
+import { SimulationResponse } from '../../../core/models/credit.model';
 
 // Enregistrer les données de localisation française
 registerLocaleData(localeFr, 'fr');
@@ -13,7 +16,7 @@ registerLocaleData(localeFr, 'fr');
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
-export class HomeComponent {
+export class HomeComponent implements OnInit, OnDestroy {
 
   readonly minAmount = 3000;
   readonly maxAmount = 60000;
@@ -24,24 +27,69 @@ export class HomeComponent {
   amount = signal(20000);
   duration = signal(36);
 
-  monthlyPayment = computed(() => {
-    const p = this.amount();
-    const n = this.duration();
-    const r = this.annualRate / 100 / 12;
-    if (r === 0) return p / n;
-    return (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-  });
+  simulation = signal<SimulationResponse | null>(null);
+  simulating = signal(false);
+  simulationError = signal(false);
 
-  totalCost = computed(() => this.monthlyPayment() * this.duration());
-  totalInterest = computed(() => this.totalCost() - this.amount());
+  currentYear = new Date().getFullYear();
+
+  private simulate$ = new Subject<void>();
+  private subscription = new Subscription();
+
+  constructor(private creditService: CreditService) {}
+
+  ngOnInit(): void {
+    this.subscription.add(
+      this.simulate$.pipe(
+        debounceTime(300),
+        switchMap(() => {
+          this.simulating.set(true);
+          this.simulationError.set(false);
+          return this.creditService.simulate({
+            amount: this.amount(),
+            durationMonths: this.duration(),
+            interestRate: this.annualRate
+          }).pipe(
+            catchError(() => {
+              this.simulationError.set(true);
+              return of(null);
+            })
+          );
+        })
+      ).subscribe(result => {
+        this.simulating.set(false);
+        if (result) {
+          this.simulation.set(result);
+        }
+      })
+    );
+
+    this.simulate$.next();
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
 
   onAmountChange(value: string): void {
     this.amount.set(Number(value));
+    this.simulate$.next();
   }
 
   onDurationChange(value: string): void {
     this.duration.set(Number(value));
+    this.simulate$.next();
   }
 
-  currentYear = new Date().getFullYear();
+  monthlyPayment(): number {
+    return this.simulation()?.monthlyPayment ?? 0;
+  }
+
+  totalCost(): number {
+    return this.simulation()?.totalCost ?? 0;
+  }
+
+  totalInterest(): number {
+    return this.simulation()?.totalInterest ?? 0;
+  }
 }

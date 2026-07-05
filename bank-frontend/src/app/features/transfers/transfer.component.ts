@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import {Router, RouterLink} from '@angular/router';
 import { AccountService } from '../../core/services/account.service';
 import { TransferService } from '../../core/services/transfer.service';
 import { Account } from '../../core/models/account.model';
@@ -11,7 +11,7 @@ type TransferStep = 'details' | 'confirmation';
 @Component({
   selector: 'app-transfer',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './transfer.component.html',
   styleUrl: './transfer.component.css'
 })

@@ -1,0 +1,247 @@
+<h1 class="page-title">Crédits</h1>
+
+<div class="tabs">
+  <button
+    class="tab-button"
+    [class.active]="activeTab() === 'simulate'"
+    (click)="selectTab('simulate')"
+  >
+    <i class="ti ti-calculator"></i> Simuler & demander
+  </button>
+  <button
+    class="tab-button"
+    [class.active]="activeTab() === 'my-requests'"
+    (click)="selectTab('my-requests')"
+  >
+    <i class="ti ti-list-details"></i> Mes demandes
+  </button>
+</div>
+
+<!-- ===================== SIMULATION ===================== -->
+@if (activeTab() === 'simulate') {
+
+  <div class="type-grid">
+    @for (option of typeOptions; track option.value) {
+      <button
+        class="type-card"
+        [class.selected]="selectedType().value === option.value"
+        (click)="onTypeSelect(option)"
+      >
+        <i class="ti" [class]="option.icon"></i>
+        <span>{{ option.label }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="simulate-grid">
+
+    <!-- Panneau de saisie -->
+    <div class="panel">
+      <div class="panel-header">
+        <span>Paramètres du crédit</span>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <label for="amount">Montant emprunté</label>
+          <span class="field-value">{{ amount() | number:'1.0-0':'fr' }} DT</span>
+        </div>
+        <input
+          id="amount"
+          type="range"
+          [min]="selectedType().minAmount"
+          [max]="selectedType().maxAmount"
+          [step]="500"
+          [value]="amount()"
+          (input)="onAmountChange($any($event.target).value)"
+        />
+        <div class="field-bounds">
+          <span>{{ selectedType().minAmount | number:'1.0-0':'fr' }} DT</span>
+          <span>{{ selectedType().maxAmount | number:'1.0-0':'fr' }} DT</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <label for="duration">Durée de remboursement</label>
+          <span class="field-value">{{ duration() }} mois</span>
+        </div>
+        <input
+          id="duration"
+          type="range"
+          [min]="selectedType().minDuration"
+          [max]="selectedType().maxDuration"
+          [step]="6"
+          [value]="duration()"
+          (input)="onDurationChange($any($event.target).value)"
+        />
+        <div class="field-bounds">
+          <span>{{ selectedType().minDuration }} mois</span>
+          <span>{{ selectedType().maxDuration }} mois</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <label>Taux indicatif</label>
+          <span class="field-value">{{ rate() }} %</span>
+        </div>
+        <p class="rate-note">Taux appliqué au type de crédit sélectionné, à titre indicatif.</p>
+      </div>
+
+      <div class="field">
+        <label for="purpose">Motif (optionnel)</label>
+        <input
+          id="purpose"
+          type="text"
+          class="text-input"
+          placeholder="Ex : achat véhicule, travaux, projet professionnel..."
+          [value]="purpose()"
+          (input)="onPurposeChange($any($event.target).value)"
+        />
+      </div>
+
+      @if (submitError()) {
+        <div class="alert-error">
+          <i class="ti ti-alert-circle"></i>
+          <span>{{ submitError() }}</span>
+        </div>
+      }
+
+      @if (submitSuccess()) {
+        <div class="alert-success">
+          <i class="ti ti-circle-check"></i>
+          <span>Votre demande a été envoyée. Suivez son statut dans l'onglet "Mes demandes".</span>
+        </div>
+      }
+
+      <button
+        class="btn-submit"
+        [disabled]="submitting() || simulating() || !simulation()"
+        (click)="submitCreditRequest()"
+      >
+        @if (submitting()) {
+          <span class="spinner"></span> Envoi en cours...
+        } @else {
+          Envoyer la demande de crédit <i class="ti ti-arrow-right"></i>
+        }
+      </button>
+    </div>
+
+    <!-- Panneau résultat -->
+    <div class="panel result-panel">
+      <div class="panel-header">
+        <span>Résultat de la simulation</span>
+        @if (simulating()) {
+          <span class="live-indicator"><span class="dot"></span> calcul...</span>
+        }
+      </div>
+
+      @if (simulationError()) {
+        <div class="alert-error">
+          <i class="ti ti-alert-circle"></i>
+          <span>{{ simulationError() }}</span>
+        </div>
+      }
+
+      @if (simulation(); as sim) {
+        <div class="result-main">
+          <span class="result-label">Mensualité estimée</span>
+          <span class="result-value">{{ sim.monthlyPayment | number:'1.0-0':'fr' }} DT<span class="result-unit">/mois</span></span>
+        </div>
+
+        <div class="result-details">
+          <div>
+            <span class="detail-label">Coût total</span>
+            <span class="detail-value">{{ sim.totalCost | number:'1.0-0':'fr' }} DT</span>
+          </div>
+          <div>
+            <span class="detail-label">Dont intérêts</span>
+            <span class="detail-value">{{ sim.totalInterest | number:'1.0-0':'fr' }} DT</span>
+          </div>
+        </div>
+
+        <div class="schedule-header">
+          <span>Échéancier</span>
+          @if (sim.schedule.length > 12) {
+            <button class="link-button" (click)="toggleFullSchedule()">
+              {{ showFullSchedule() ? 'Réduire' : 'Voir tout (' + sim.schedule.length + ' mois)' }}
+            </button>
+          }
+        </div>
+
+        <div class="schedule-table-wrapper">
+          <table class="schedule-table">
+            <thead>
+              <tr>
+                <th>Mois</th>
+                <th>Mensualité</th>
+                <th>Capital</th>
+                <th>Intérêts</th>
+                <th>Solde restant</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of visibleSchedule(); track row.month) {
+                <tr>
+                  <td>{{ row.month }}</td>
+                  <td>{{ row.monthlyPayment | number:'1.0-0':'fr' }} DT</td>
+                  <td>{{ row.principal | number:'1.0-0':'fr' }} DT</td>
+                  <td>{{ row.interest | number:'1.0-0':'fr' }} DT</td>
+                  <td>{{ row.remainingBalance | number:'1.0-0':'fr' }} DT</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else if (!simulationError()) {
+        <div class="empty-state">Ajustez les paramètres pour voir la simulation.</div>
+      }
+    </div>
+  </div>
+}
+
+<!-- ===================== MES DEMANDES ===================== -->
+@if (activeTab() === 'my-requests') {
+
+  @if (loadingRequests()) {
+    <div class="loading-state">Chargement de vos demandes...</div>
+  } @else if (myRequests().length === 0) {
+    <div class="empty-state">
+      Vous n'avez encore fait aucune demande de crédit.
+    </div>
+  } @else {
+    <div class="requests-list">
+      @for (req of myRequests(); track req.id) {
+        <div class="request-card">
+          <div class="request-card-header">
+            <span class="request-type">{{ typeLabel(req.type) }}</span>
+            <span class="status-badge" [class]="req.status.toLowerCase()">
+              {{ statusLabel(req.status) }}
+            </span>
+          </div>
+
+          <div class="request-amount">{{ req.amount | number:'1.0-0':'fr' }} DT</div>
+
+          <div class="request-meta">
+            <span><i class="ti ti-calendar-time"></i> {{ req.durationMonths }} mois</span>
+            <span><i class="ti ti-percentage"></i> {{ req.interestRate }} %</span>
+            <span><i class="ti ti-cash"></i> {{ req.monthlyPayment | number:'1.0-0':'fr' }} DT/mois</span>
+          </div>
+
+          @if (req.purpose) {
+            <p class="request-purpose">{{ req.purpose }}</p>
+          }
+
+          @if (req.status !== 'PENDING' && req.adminComment) {
+            <p class="request-comment">
+              <i class="ti ti-message-circle"></i> {{ req.adminComment }}
+            </p>
+          }
+
+          <span class="request-date">Demande envoyée le {{ req.createdAt | date:'dd/MM/yyyy':'fr' }}</span>
+        </div>
+      }
+    </div>
+  }
+}

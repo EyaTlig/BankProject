@@ -9,6 +9,8 @@ import {TransferComponent} from './features/transfers/transfer.component';
 import {RecurringTransferComponent} from './features/recurring-transfers/recurring-transfer.component';
 import {AccountsComponent} from './features/accounts/accounts.component';
 import {HomeComponent} from './features/public/home/home.component';
+import {CreditsComponent} from './features/credits/credits.component';
+import {BulkTransferComponent} from './features/bulk-transfers/bulk-transfer.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent },
@@ -23,6 +25,8 @@ export const routes: Routes = [
       { path: 'recurring-transfers', component: RecurringTransferComponent },
       { path: 'dashboard', component: DashboardComponent },
       { path: 'accounts', component: AccountsComponent },
-      { path: 'transfers', component: TransferComponent }    ]}
+      { path: 'transfers', component: TransferComponent },
+      { path: 'credits', component: CreditsComponent },
+      { path: 'transfers/bulk', component: BulkTransferComponent }]}
 
 ];

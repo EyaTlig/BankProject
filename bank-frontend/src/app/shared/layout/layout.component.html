@@ -2,10 +2,7 @@
 
   <aside class="sidebar">
     <div class="sidebar-brand">
-      <svg width="32" height="32" viewBox="0 0 46 46" fill="none">
-        <rect width="46" height="46" rx="14" fill="#a3e635"/>
-        <path d="M12 34V12H19L24 23L29 12H34V34H29V20L24 30L19 20V34H12Z" fill="#030d08"/>
-      </svg>
+      <img src="/ammenlogo.png" alt="AMEN BANK Logo" class="brand-logo" />
       <span>AMMEN BANK</span>
     </div>
 
@@ -19,6 +16,9 @@
       <a routerLink="/transfers" routerLinkActive="active" class="nav-item">
         <i class="ti ti-arrows-exchange"></i> Virements
       </a>
+          <a routerLink="/transfers/bulk" routerLinkActive="active" class="nav-item">
+              <i class="ti ti-file-spreadsheet"></i> Virements groupés
+           </a>
       <a routerLink="/recurring-transfers" routerLinkActive="active" class="nav-item">
         <i class="ti ti-repeat"></i> Permanents
       </a>

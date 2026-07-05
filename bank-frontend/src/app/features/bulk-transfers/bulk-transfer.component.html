@@ -1,0 +1,212 @@
+<div class="transfer-wrapper">
+
+  <div class="steps-indicator">
+    <div class="step" [class.active]="step === 'upload'" [class.done]="step === 'confirmation' || step === 'results'">
+      <div class="step-circle">
+        @if (step === 'confirmation' || step === 'results') { <i class="ti ti-check"></i> } @else { 1 }
+      </div>
+      <span>Fichier CSV</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" [class.active]="step === 'confirmation'" [class.done]="step === 'results'">
+      <div class="step-circle">
+        @if (step === 'results') { <i class="ti ti-check"></i> } @else { 2 }
+      </div>
+      <span>Confirmation</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" [class.active]="step === 'results'">
+      <div class="step-circle">3</div>
+      <span>Résultats</span>
+    </div>
+  </div>
+
+  <div class="transfer-card">
+
+    @if (step === 'upload') {
+
+      <h2>Virement groupé (import CSV)</h2>
+      <p class="confirmation-subtitle">
+        Importez un fichier CSV contenant vos bénéficiaires pour effectuer plusieurs virements en une seule opération.
+      </p>
+
+      <form [formGroup]="uploadForm" (ngSubmit)="submitUpload()">
+
+        <label>Compte source</label>
+        <select formControlName="sourceAccountId" (change)="onAccountChange()" class="select-account">
+          @for (account of accounts; track account.id) {
+            <option [value]="account.id">
+              {{ account.type === 'COURANT' ? 'Compte courant' : 'Compte épargne' }} — {{ account.balance | number:'1.3-3' }} DT
+            </option>
+          }
+        </select>
+
+        @if (selectedAccount) {
+          <div class="account-preview">
+            <div>
+              <p class="account-preview-type">{{ selectedAccount.type === 'COURANT' ? 'Compte courant' : 'Compte épargne' }}</p>
+              <p class="account-preview-number">{{ selectedAccount.accountNumber }}</p>
+            </div>
+            <p class="account-preview-balance">{{ selectedAccount.balance | number:'1.3-3' }} DT</p>
+          </div>
+        }
+
+        <label>Fichier CSV des bénéficiaires</label>
+        <div class="file-drop">
+          <input
+            type="file"
+            accept=".csv"
+            id="csvFile"
+            class="file-input"
+            (change)="onFileSelected($event)"
+          />
+          <label for="csvFile" class="file-drop-label">
+            <i class="ti ti-file-upload"></i>
+            @if (selectedFile) {
+              <span>{{ selectedFile.name }}</span>
+            } @else {
+              <span>Cliquez pour choisir un fichier .csv</span>
+            }
+          </label>
+        </div>
+        <button type="button" class="template-link" (click)="downloadTemplate()">
+          <i class="ti ti-download"></i> Télécharger un modèle CSV
+        </button>
+
+        <p class="csv-hint">
+          Colonnes attendues : <code>destinationAccountNumber</code>, <code>amount</code>, <code>label</code> (optionnel).
+        </p>
+
+        @if (previewError) {
+          <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ previewError }}</div>
+        }
+
+        @if (previewRows.length > 0) {
+          <div class="preview-table-wrapper">
+            <p class="preview-title">Aperçu ({{ previewRows.length }} ligne(s) affichée(s))</p>
+            <table class="preview-table">
+              <thead>
+              <tr>
+                <th>Compte destinataire</th>
+                <th>Montant</th>
+                <th>Motif</th>
+              </tr>
+              </thead>
+              <tbody>
+                @for (row of previewRows; track $index) {
+                  <tr>
+                    <td class="mono">{{ row.destinationAccountNumber }}</td>
+                    <td>{{ row.amount }}</td>
+                    <td>{{ row.label }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        @if (errorMessage) {
+          <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ errorMessage }}</div>
+        }
+
+        <button type="submit" class="btn-submit" [disabled]="loading">
+          @if (loading) { <span class="spinner"></span> Import en cours... }
+          @else { Continuer <i class="ti ti-arrow-right"></i> }
+        </button>
+      </form>
+    }
+
+    @if (step === 'confirmation') {
+
+      <button class="back-link" (click)="backToUpload()">
+        <i class="ti ti-arrow-left"></i> Modifier le fichier
+      </button>
+
+      <h2>Confirmation du virement groupé</h2>
+      <p class="confirmation-subtitle">
+        Un code de vérification a été envoyé par email pour valider le lot de {{ totalItems }} virement(s).
+      </p>
+
+      <form [formGroup]="otpForm" (ngSubmit)="submitConfirmation()">
+
+        <label>Code de vérification</label>
+        <input
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          formControlName="otpCode"
+          placeholder="123456"
+          class="otp-input"
+          [class.input-error]="otpControl?.invalid && otpControl?.touched"
+          autocomplete="one-time-code"
+        />
+        @if (otpControl?.invalid && otpControl?.touched) {
+          <p class="field-error">Le code doit contenir 6 chiffres.</p>
+        }
+
+        @if (errorMessage) {
+          <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ errorMessage }}</div>
+        }
+
+        <button type="submit" class="btn-submit" [disabled]="loading">
+          @if (loading) { <span class="spinner"></span> Vérification... }
+          @else { Valider les virements <i class="ti ti-check"></i> }
+        </button>
+      </form>
+    }
+
+    @if (step === 'results') {
+
+      <h2>Résultats du virement groupé</h2>
+
+      <div class="results-summary">
+        <div class="result-badge success">
+          <i class="ti ti-circle-check"></i>
+          <span>{{ successCount }} réussi(s)</span>
+        </div>
+        <div class="result-badge failed">
+          <i class="ti ti-circle-x"></i>
+          <span>{{ failedCount }} échoué(s)</span>
+        </div>
+      </div>
+
+      <div class="preview-table-wrapper">
+        <table class="preview-table">
+          <thead>
+          <tr>
+            <th>Compte destinataire</th>
+            <th>Montant</th>
+            <th>Statut</th>
+            <th>Détail</th>
+          </tr>
+          </thead>
+          <tbody>
+            @for (result of results; track $index) {
+              <tr>
+                <td class="mono">{{ result.destinationAccountNumber }}</td>
+                <td>{{ result.amount | number:'1.3-3' }} DT</td>
+                <td>
+                  @if (result.status === 'SUCCESS') {
+                    <span class="status-pill success">Réussi</span>
+                  } @else {
+                    <span class="status-pill failed">Échoué</span>
+                  }
+                </td>
+                <td class="error-detail">{{ result.errorMessage || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="results-actions">
+        <button type="button" class="btn-secondary" (click)="startNewBulkTransfer()">
+          <i class="ti ti-plus"></i> Nouveau virement groupé
+        </button>
+        <button type="button" class="btn-submit" (click)="goToDashboard()">
+          Retour au tableau de bord <i class="ti ti-arrow-right"></i>
+        </button>
+      </div>
+    }
+  </div>
+</div>

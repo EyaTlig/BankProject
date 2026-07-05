@@ -252,7 +252,7 @@ input.input-error {
 
 /* --- PANNEAU ARTISTIQUE (DROITE) --- */
 .illustration-panel {
-  background-color: #030d08 !important; /* Force l'arrière-plan sombre */
+  background-color: #004d33 !important; /* Force l'arrière-plan sombre */
   position: relative;
   display: flex;
   align-items: center;
@@ -266,7 +266,6 @@ input.input-error {
 .background-pattern {
   position: absolute;
   inset: 0;
-  opacity: 0.15;
   background-image: radial-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 0);
   background-size: 32px 32px;
   z-index: 1;

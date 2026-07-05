@@ -35,7 +35,7 @@
 }
 
 .account-card.selected {
-  background: linear-gradient(135deg, #030d08, #0a1f12);
+  background: linear-gradient(135deg, #289d67, #0a1f12);
   border: 2px solid #a3e635;
 }
 
