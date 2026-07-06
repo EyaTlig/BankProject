@@ -11,13 +11,13 @@
   <div class="table-wrapper">
     <table class="users-table">
       <thead>
-        <tr>
-          <th>Utilisateur</th>
-          <th>Email</th>
-          <th>Rôle</th>
-          <th>Statut</th>
-          <th>Actions</th>
-        </tr>
+      <tr>
+        <th>Utilisateur</th>
+        <th>Email</th>
+        <th>Rôle</th>
+        <th>Statut</th>
+        <th>Actions</th>
+      </tr>
       </thead>
       <tbody>
         @for (user of users(); track user.id) {
@@ -66,16 +66,15 @@
             </td>
           </tr>
 
-          @if (tempPasswordFor()?.id === user.id) {
+          @if (resetPasswordSuccessFor() === user.id) {
             <tr class="inline-panel-row">
               <td colspan="5">
                 <div class="temp-password-panel">
                   <i class="ti ti-circle-check"></i>
                   <span>
-                    Mot de passe temporaire pour <strong>{{ user.email }}</strong> :
-                    <code>{{ tempPasswordFor()?.password }}</code>
+                    Un nouveau mot de passe a été envoyé par email à <strong>{{ user.email }}</strong>.
                   </span>
-                  <button class="close-btn" (click)="closeTempPassword()">
+                  <button class="close-btn" (click)="closeResetPasswordSuccess()">
                     <i class="ti ti-x"></i>
                   </button>
                 </div>

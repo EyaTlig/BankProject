@@ -1,0 +1,124 @@
+<div class="page-header">
+  <h1 class="page-title">Gestion des comptes</h1>
+  <button class="btn-primary" (click)="toggleForm()">
+    <i class="ti" [class.ti-plus]="!showForm()" [class.ti-x]="showForm()"></i>
+    {{ showForm() ? 'Annuler' : 'Nouveau compte' }}
+  </button>
+</div>
+
+@if (successMessage()) {
+  <div class="alert-success"><i class="ti ti-circle-check"></i> {{ successMessage() }}</div>
+}
+@if (error()) {
+  <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+}
+
+@if (showForm()) {
+  <div class="form-card">
+    <h2>Nouveau compte</h2>
+    <form [formGroup]="form" (ngSubmit)="submit()">
+
+      <div class="form-row">
+        <div class="form-field">
+          <label>Client</label>
+          <select formControlName="clientId">
+            @for (client of clients(); track client.id) {
+              <option [value]="client.id">{{ client.firstName }} {{ client.lastName }} — {{ client.email }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Type de compte</label>
+          <select formControlName="type">
+            <option value="COURANT">Compte courant</option>
+            <option value="EPARGNE">Compte épargne</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Solde initial (DT)</label>
+          <input type="number" step="0.001" min="0" formControlName="initialBalance" />
+        </div>
+      </div>
+
+      @if (createError()) {
+        <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ createError() }}</div>
+      }
+
+      <button type="submit" class="btn-primary" [disabled]="createLoading()">
+        @if (createLoading()) { Création en cours... } @else { Créer le compte }
+      </button>
+    </form>
+  </div>
+}
+
+@if (loading()) {
+  <div class="loading-state">Chargement des comptes...</div>
+} @else {
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+      <tr>
+        <th>N° de compte</th>
+        <th>Titulaire</th>
+        <th>Type</th>
+        <th>Solde</th>
+        <th>Créé le</th>
+        <th>Actions</th>
+      </tr>
+      </thead>
+      <tbody>
+        @for (account of accounts(); track account.id) {
+          <tr>
+            <td class="mono">{{ account.accountNumber }}</td>
+            <td>
+              {{ account.clientFullName }}
+              <div class="sub-text">{{ account.clientEmail }}</div>
+            </td>
+            <td>
+              <span class="type-badge" [class.epargne]="account.type === 'EPARGNE'">
+                {{ account.type === 'COURANT' ? 'Courant' : 'Épargne' }}
+              </span>
+            </td>
+            <td>{{ account.balance | number:'1.3-3':'fr' }} DT</td>
+            <td>{{ account.createdAt | date:'dd/MM/yyyy' }}</td>
+            <td>
+              <button class="btn-secondary-sm" (click)="toggleCreditForm(account.id)">
+                <i class="ti ti-cash-banknote"></i> Créditer
+              </button>
+            </td>
+          </tr>
+
+          @if (creditingAccountId() === account.id) {
+            <tr class="credit-panel-row">
+              <td colspan="6">
+                <form class="credit-panel" [formGroup]="creditForm" (ngSubmit)="submitCredit(account.id)">
+                  <div class="credit-field">
+                    <label>Montant (DT)</label>
+                    <input type="number" step="0.001" min="0.001" formControlName="amount" placeholder="0.000" />
+                  </div>
+                  <div class="credit-field">
+                    <label>Motif (optionnel)</label>
+                    <input type="text" formControlName="label" placeholder="Ex : dépôt en agence" />
+                  </div>
+                  @if (creditError()) {
+                    <div class="credit-error">{{ creditError() }}</div>
+                  }
+                  <button type="submit" class="btn-primary" [disabled]="creditLoading()">
+                    @if (creditLoading()) { Envoi... } @else { Confirmer le crédit }
+                  </button>
+                  <button type="button" class="btn-secondary-sm" (click)="toggleCreditForm(account.id)">
+                    Annuler
+                  </button>
+                </form>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+
+    @if (accounts().length === 0) {
+      <div class="empty-state">Aucun compte pour le moment.</div>
+    }
+  </div>
+}

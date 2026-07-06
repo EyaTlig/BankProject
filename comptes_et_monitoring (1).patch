@@ -1,0 +1,1298 @@
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminAccountResponse.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminAccountResponse.java
+new file mode 100644
+index 0000000..63d86c8
+--- /dev/null
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminAccountResponse.java
+@@ -0,0 +1,21 @@
++package tn.bank.accountservice.application;
++
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import tn.bank.accountservice.domain.AccountType;
++
++import java.math.BigDecimal;
++import java.time.LocalDateTime;
++
++@Data
++@AllArgsConstructor
++public class AdminAccountResponse {
++    private Long id;
++    private String accountNumber;
++    private AccountType type;
++    private BigDecimal balance;
++    private LocalDateTime createdAt;
++    private Long clientId;
++    private String clientEmail;
++    private String clientFullName;
++}
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminAccountService.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminAccountService.java
+index 0c8386c..fdc198b 100644
+--- a/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminAccountService.java
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminAccountService.java
+@@ -2,18 +2,34 @@ package tn.bank.accountservice.application;
+ 
+ import lombok.RequiredArgsConstructor;
+ import org.springframework.stereotype.Service;
++import org.springframework.transaction.annotation.Transactional;
++import tn.bank.accountservice.domain.Account;
++import tn.bank.accountservice.domain.Client;
++import tn.bank.accountservice.domain.Transaction;
+ import tn.bank.accountservice.domain.TransactionType;
+ import tn.bank.accountservice.infrastructure.AccountRepository;
++import tn.bank.accountservice.infrastructure.ClientRepository;
+ import tn.bank.accountservice.infrastructure.TransactionRepository;
+ 
+ import java.math.BigDecimal;
++import java.math.BigInteger;
++import java.time.LocalDate;
++import java.time.LocalDateTime;
++import java.util.Comparator;
++import java.util.List;
++import java.util.UUID;
+ 
+ @Service
+ @RequiredArgsConstructor
+ public class AdminAccountService {
+ 
++    private static final String CODE_BANQUE_AMEN = "07";
++    private static final String CODE_AGENCE = "807";
++    private static final int MAX_ACCOUNT_NUMBER_ATTEMPTS = 10;
++
+     private final AccountRepository accountRepository;
+     private final TransactionRepository transactionRepository;
++    private final ClientRepository clientRepository;
+ 
+     public AdminStatsResponse getStats() {
+         long totalAccounts = accountRepository.count();
+@@ -33,4 +49,136 @@ public class AdminAccountService {
+ 
+         return new AdminStatsResponse(totalAccounts, totalTransactions, totalBalance, sortants, entrants);
+     }
++
++    public List<AdminClientResponse> getAllClients() {
++        return clientRepository.findAll().stream()
++                .map(client -> new AdminClientResponse(
++                        client.getId(),
++                        client.getEmail(),
++                        client.getFirstName(),
++                        client.getLastName(),
++                        client.getAccounts().size(),
++                        client.getAccounts().stream()
++                                .map(Account::getBalance)
++                                .reduce(BigDecimal.ZERO, BigDecimal::add)
++                ))
++                .toList();
++    }
++
++    public List<AdminAccountResponse> getAllAccounts() {
++        return accountRepository.findAll().stream()
++                .map(this::toAccountResponse)
++                .toList();
++    }
++
++    @Transactional
++    public AdminAccountResponse createAccount(AdminCreateAccountRequest request) {
++
++        if (request.getClientId() == null) {
++            throw new IllegalArgumentException("Le client est obligatoire");
++        }
++        if (request.getType() == null) {
++            throw new IllegalArgumentException("Le type de compte est obligatoire");
++        }
++
++        Client client = clientRepository.findById(request.getClientId())
++                .orElseThrow(() -> new IllegalArgumentException("Client introuvable"));
++
++        BigDecimal initialBalance = request.getInitialBalance() != null
++                ? request.getInitialBalance()
++                : BigDecimal.ZERO;
++
++        if (initialBalance.compareTo(BigDecimal.ZERO) < 0) {
++            throw new IllegalArgumentException("Le solde initial ne peut pas être négatif");
++        }
++
++        Account account = Account.builder()
++                .accountNumber(generateUniqueAccountNumber())
++                .type(request.getType())
++                .balance(initialBalance)
++                .createdAt(LocalDateTime.now())
++                .client(client)
++                .build();
++
++        Account savedAccount = accountRepository.save(account);
++
++        return toAccountResponse(savedAccount);
++    }
++
++    public List<AdminTransactionResponse> getTransactions(
++            LocalDate startDate,
++            LocalDate endDate,
++            TransactionType type,
++            String accountNumber
++    ) {
++        return accountRepository.findAll().stream()
++                .flatMap(account -> transactionRepository.findByAccountOrderByDateDesc(account).stream())
++                .filter(t -> startDate == null || !t.getDate().toLocalDate().isBefore(startDate))
++                .filter(t -> endDate == null || !t.getDate().toLocalDate().isAfter(endDate))
++                .filter(t -> type == null || t.getType() == type)
++                .filter(t -> accountNumber == null || accountNumber.isBlank()
++                        || t.getAccount().getAccountNumber().equalsIgnoreCase(accountNumber))
++                .sorted(Comparator.comparing(Transaction::getDate).reversed())
++                .map(this::toTransactionResponse)
++                .toList();
++    }
++
++    private AdminAccountResponse toAccountResponse(Account account) {
++        Client client = account.getClient();
++        return new AdminAccountResponse(
++                account.getId(),
++                account.getAccountNumber(),
++                account.getType(),
++                account.getBalance(),
++                account.getCreatedAt(),
++                client.getId(),
++                client.getEmail(),
++                client.getFirstName() + " " + client.getLastName()
++        );
++    }
++
++    private AdminTransactionResponse toTransactionResponse(Transaction transaction) {
++        Client client = transaction.getAccount().getClient();
++        return new AdminTransactionResponse(
++                transaction.getId(),
++                transaction.getType(),
++                transaction.getAmount(),
++                transaction.getBalanceAfter(),
++                transaction.getDate(),
++                transaction.getAccount().getAccountNumber(),
++                client.getEmail(),
++                client.getFirstName() + " " + client.getLastName()
++        );
++    }
++
++    private String generateUniqueAccountNumber() {
++        String accountNumber;
++        int attempts = 0;
++
++        do {
++            accountNumber = generateAccountNumber();
++            attempts++;
++            if (attempts >= MAX_ACCOUNT_NUMBER_ATTEMPTS) {
++                throw new IllegalStateException(
++                        "Impossible de générer un numéro de compte unique après " + MAX_ACCOUNT_NUMBER_ATTEMPTS + " tentatives"
++                );
++            }
++        } while (accountRepository.findByAccountNumber(accountNumber).isPresent());
++
++        return accountNumber;
++    }
++
++    private String generateAccountNumber() {
++        String numeroCompte = String.format("%013d", Math.abs(UUID.randomUUID().getMostSignificantBits()) % 10_000_000_000_000L);
++        String ribSansCle = CODE_BANQUE_AMEN + CODE_AGENCE + numeroCompte;
++        String cleRib = calculerCleRib(ribSansCle);
++        return ribSansCle + cleRib;
++    }
++
++    private String calculerCleRib(String ribSansCle) {
++        long modulo = new BigInteger(ribSansCle).mod(BigInteger.valueOf(97)).longValue();
++        long cle = 97 - modulo;
++        return String.format("%02d", cle);
++    }
+ }
++
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminClientResponse.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminClientResponse.java
+new file mode 100644
+index 0000000..d957d86
+--- /dev/null
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminClientResponse.java
+@@ -0,0 +1,17 @@
++package tn.bank.accountservice.application;
++
++import lombok.AllArgsConstructor;
++import lombok.Data;
++
++import java.math.BigDecimal;
++
++@Data
++@AllArgsConstructor
++public class AdminClientResponse {
++    private Long id;
++    private String email;
++    private String firstName;
++    private String lastName;
++    private int accountCount;
++    private BigDecimal totalBalance;
++}
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminCreateAccountRequest.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminCreateAccountRequest.java
+new file mode 100644
+index 0000000..61ead8e
+--- /dev/null
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminCreateAccountRequest.java
+@@ -0,0 +1,13 @@
++package tn.bank.accountservice.application;
++
++import lombok.Data;
++import tn.bank.accountservice.domain.AccountType;
++
++import java.math.BigDecimal;
++
++@Data
++public class AdminCreateAccountRequest {
++    private Long clientId;
++    private AccountType type;
++    private BigDecimal initialBalance;
++}
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminTransactionResponse.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminTransactionResponse.java
+new file mode 100644
+index 0000000..8e6f374
+--- /dev/null
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminTransactionResponse.java
+@@ -0,0 +1,21 @@
++package tn.bank.accountservice.application;
++
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import tn.bank.accountservice.domain.TransactionType;
++
++import java.math.BigDecimal;
++import java.time.LocalDateTime;
++
++@Data
++@AllArgsConstructor
++public class AdminTransactionResponse {
++    private Long id;
++    private TransactionType type;
++    private BigDecimal amount;
++    private BigDecimal balanceAfter;
++    private LocalDateTime date;
++    private String accountNumber;
++    private String clientEmail;
++    private String clientFullName;
++}
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/presentation/AdminAccountController.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/presentation/AdminAccountController.java
+index 09d6ca1..c9f6b8f 100644
+--- a/bank-backend/account-service/src/main/java/tn/bank/accountservice/presentation/AdminAccountController.java
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/presentation/AdminAccountController.java
+@@ -1,12 +1,15 @@
+ package tn.bank.accountservice.presentation;
+ 
+ import lombok.RequiredArgsConstructor;
++import org.springframework.format.annotation.DateTimeFormat;
++import org.springframework.http.HttpStatus;
+ import org.springframework.http.ResponseEntity;
+-import org.springframework.web.bind.annotation.GetMapping;
+-import org.springframework.web.bind.annotation.RequestMapping;
+-import org.springframework.web.bind.annotation.RestController;
+-import tn.bank.accountservice.application.AdminAccountService;
+-import tn.bank.accountservice.application.AdminStatsResponse;
++import org.springframework.web.bind.annotation.*;
++import tn.bank.accountservice.application.*;
++import tn.bank.accountservice.domain.TransactionType;
++
++import java.time.LocalDate;
++import java.util.List;
+ 
+ @RestController
+ @RequestMapping("/api/admin")
+@@ -19,4 +22,31 @@ public class AdminAccountController {
+     public ResponseEntity<AdminStatsResponse> getStats() {
+         return ResponseEntity.ok(adminAccountService.getStats());
+     }
++
++    @GetMapping("/clients")
++    public ResponseEntity<List<AdminClientResponse>> getAllClients() {
++        return ResponseEntity.ok(adminAccountService.getAllClients());
++    }
++
++    @GetMapping("/accounts")
++    public ResponseEntity<List<AdminAccountResponse>> getAllAccounts() {
++        return ResponseEntity.ok(adminAccountService.getAllAccounts());
++    }
++
++    @PostMapping("/accounts")
++    public ResponseEntity<AdminAccountResponse> createAccount(@RequestBody AdminCreateAccountRequest request) {
++        AdminAccountResponse response = adminAccountService.createAccount(request);
++        return ResponseEntity.status(HttpStatus.CREATED).body(response);
++    }
++
++    @GetMapping("/transactions")
++    public ResponseEntity<List<AdminTransactionResponse>> getTransactions(
++            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
++            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
++            @RequestParam(required = false) TransactionType type,
++            @RequestParam(required = false) String accountNumber
++    ) {
++        return ResponseEntity.ok(adminAccountService.getTransactions(startDate, endDate, type, accountNumber));
++    }
+ }
++
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/AdminBootstrapRunner.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/AdminBootstrapRunner.java
+new file mode 100644
+index 0000000..61d20b6
+--- /dev/null
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/AdminBootstrapRunner.java
+@@ -0,0 +1,46 @@
++package tn.bank.authservice.infrastructure;
++
++import lombok.RequiredArgsConstructor;
++import lombok.extern.slf4j.Slf4j;
++import org.springframework.beans.factory.annotation.Value;
++import org.springframework.boot.CommandLineRunner;
++import org.springframework.security.crypto.password.PasswordEncoder;
++import org.springframework.stereotype.Component;
++import tn.bank.authservice.domain.Role;
++import tn.bank.authservice.domain.User;
++
++@Slf4j
++@Component
++@RequiredArgsConstructor
++public class AdminBootstrapRunner implements CommandLineRunner {
++
++    private final UserRepository userRepository;
++    private final PasswordEncoder passwordEncoder;
++
++    @Value("${admin.bootstrap.email}")
++    private String bootstrapEmail;
++
++    @Value("${admin.bootstrap.password}")
++    private String bootstrapPassword;
++
++    @Override
++    public void run(String... args) {
++        if (userRepository.existsByRole(Role.ADMIN)) {
++            return;
++        }
++
++        User admin = User.builder()
++                .email(bootstrapEmail)
++                .password(passwordEncoder.encode(bootstrapPassword))
++                .firstName("Super")
++                .lastName("Admin")
++                .role(Role.ADMIN)
++                .enabled(true)
++                .build();
++
++        userRepository.save(admin);
++
++        log.warn("=== Compte administrateur créé automatiquement : {} / {} (à changer en production) ===",
++                bootstrapEmail, bootstrapPassword);
++    }
++}
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/UserRepository.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/UserRepository.java
+index a195f38..5e770b3 100644
+--- a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/UserRepository.java
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/UserRepository.java
+@@ -1,6 +1,7 @@
+ package tn.bank.authservice.infrastructure;
+ 
+ import org.springframework.data.jpa.repository.JpaRepository;
++import tn.bank.authservice.domain.Role;
+ import tn.bank.authservice.domain.User;
+ 
+ import java.util.Optional;
+@@ -10,4 +11,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
+     Optional<User> findByEmail(String email);
+ 
+     boolean existsByEmail(String email);
++
++    boolean existsByRole(Role role);
+ }
+diff --git a/bank-backend/auth-service/src/main/resources/application.properties b/bank-backend/auth-service/src/main/resources/application.properties
+index 7a41233..1ce3641 100644
+--- a/bank-backend/auth-service/src/main/resources/application.properties
++++ b/bank-backend/auth-service/src/main/resources/application.properties
+@@ -32,4 +32,8 @@ spring.rabbitmq.port=5672
+ spring.rabbitmq.username=guest
+ spring.rabbitmq.password=guest
+ rabbitmq.exchange.user=user.exchange
+-rabbitmq.routingkey.user-created=user.created
+\ No newline at end of file
++rabbitmq.routingkey.user-created=user.created
++
++# Compte administrateur créé automatiquement au premier démarrage (si aucun ADMIN n'existe)
++admin.bootstrap.email=admin@bankplatform.tn
++admin.bootstrap.password=Admin@2026!
+\ No newline at end of file
+diff --git a/bank-frontend/src/app/app.routes.ts b/bank-frontend/src/app/app.routes.ts
+index 92d2b31..6331526 100644
+--- a/bank-frontend/src/app/app.routes.ts
++++ b/bank-frontend/src/app/app.routes.ts
+@@ -15,6 +15,8 @@ import {clientOnlyGuard} from './core/guards/client-only.guard';
+ import {AdminDashboardComponent} from './features/admin/dashboard/admin-dashboard.component';
+ import {AdminUsersComponent} from './features/admin/users/admin-users.component';
+ import {AdminCreditsComponent} from './features/admin/credits/admin-credits.component';
++import {AdminAccountsComponent} from './features/admin/accounts/admin-accounts.component';
++import {AdminTransactionsComponent} from './features/admin/transactions/admin-transactions.component';
+ import {BulkTransferComponent} from './features/bulk-transfers/bulk-transfer.component';
+ 
+ export const routes: Routes = [
+@@ -40,6 +42,8 @@ export const routes: Routes = [
+           { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+           { path: 'dashboard', component: AdminDashboardComponent },
+           { path: 'users', component: AdminUsersComponent },
++          { path: 'accounts', component: AdminAccountsComponent },
++          { path: 'transactions', component: AdminTransactionsComponent },
+           { path: 'credits', component: AdminCreditsComponent }
+         ]
+       }
+diff --git a/bank-frontend/src/app/core/models/admin-account.model.ts b/bank-frontend/src/app/core/models/admin-account.model.ts
+new file mode 100644
+index 0000000..853d898
+--- /dev/null
++++ b/bank-frontend/src/app/core/models/admin-account.model.ts
+@@ -0,0 +1,46 @@
++export type AdminAccountType = 'COURANT' | 'EPARGNE';
++export type AdminTransactionType = 'DEPOT' | 'RETRAIT' | 'VIREMENT_ENTRANT' | 'VIREMENT_SORTANT';
++
++export interface AdminClient {
++  id: number;
++  email: string;
++  firstName: string;
++  lastName: string;
++  accountCount: number;
++  totalBalance: number;
++}
++
++export interface AdminAccount {
++  id: number;
++  accountNumber: string;
++  type: AdminAccountType;
++  balance: number;
++  createdAt: string;
++  clientId: number;
++  clientEmail: string;
++  clientFullName: string;
++}
++
++export interface AdminCreateAccountRequest {
++  clientId: number;
++  type: AdminAccountType;
++  initialBalance?: number;
++}
++
++export interface AdminTransaction {
++  id: number;
++  type: AdminTransactionType;
++  amount: number;
++  balanceAfter: number;
++  date: string;
++  accountNumber: string;
++  clientEmail: string;
++  clientFullName: string;
++}
++
++export interface AdminTransactionFilters {
++  startDate?: string;
++  endDate?: string;
++  type?: AdminTransactionType;
++  accountNumber?: string;
++}
+diff --git a/bank-frontend/src/app/core/services/admin-account.service.ts b/bank-frontend/src/app/core/services/admin-account.service.ts
+new file mode 100644
+index 0000000..e2d1321
+--- /dev/null
++++ b/bank-frontend/src/app/core/services/admin-account.service.ts
+@@ -0,0 +1,40 @@
++import { Injectable } from '@angular/core';
++import { HttpClient, HttpParams } from '@angular/common/http';
++import { Observable } from 'rxjs';
++import {
++  AdminAccount,
++  AdminClient,
++  AdminCreateAccountRequest,
++  AdminTransaction,
++  AdminTransactionFilters
++} from '../models/admin-account.model';
++
++@Injectable({ providedIn: 'root' })
++export class AdminAccountService {
++
++  private readonly baseUrl = 'http://localhost:8082/api/admin';
++
++  constructor(private http: HttpClient) {}
++
++  getAllClients(): Observable<AdminClient[]> {
++    return this.http.get<AdminClient[]>(`${this.baseUrl}/clients`);
++  }
++
++  getAllAccounts(): Observable<AdminAccount[]> {
++    return this.http.get<AdminAccount[]>(`${this.baseUrl}/accounts`);
++  }
++
++  createAccount(request: AdminCreateAccountRequest): Observable<AdminAccount> {
++    return this.http.post<AdminAccount>(`${this.baseUrl}/accounts`, request);
++  }
++
++  getTransactions(filters: AdminTransactionFilters): Observable<AdminTransaction[]> {
++    let params = new HttpParams();
++    if (filters.startDate) params = params.set('startDate', filters.startDate);
++    if (filters.endDate) params = params.set('endDate', filters.endDate);
++    if (filters.type) params = params.set('type', filters.type);
++    if (filters.accountNumber) params = params.set('accountNumber', filters.accountNumber);
++
++    return this.http.get<AdminTransaction[]>(`${this.baseUrl}/transactions`, { params });
++  }
++}
+diff --git a/bank-frontend/src/app/features/admin/accounts/admin-accounts.component.css b/bank-frontend/src/app/features/admin/accounts/admin-accounts.component.css
+new file mode 100644
+index 0000000..ad36ff1
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/accounts/admin-accounts.component.css
+@@ -0,0 +1,184 @@
++.page-header {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  margin-bottom: 20px;
++}
++
++.page-title {
++  font-size: 20px;
++  font-weight: 700;
++  color: #0f172a;
++  margin: 0;
++}
++
++.alert-error {
++  background: #fef2f2;
++  color: #dc2626;
++  border-radius: 10px;
++  padding: 12px 16px;
++  font-size: 13px;
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  margin-bottom: 16px;
++}
++
++.alert-success {
++  background: #f0fdf4;
++  color: #15803d;
++  border-radius: 10px;
++  padding: 12px 16px;
++  font-size: 13px;
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  margin-bottom: 16px;
++}
++
++.loading-state, .empty-state {
++  background: #ffffff;
++  border-radius: 14px;
++  padding: 48px;
++  text-align: center;
++  color: #64748b;
++  font-size: 14px;
++}
++
++.btn-primary {
++  background: #a3e635;
++  color: #030d08;
++  border: none;
++  padding: 11px 18px;
++  border-radius: 10px;
++  font-size: 13px;
++  font-weight: 700;
++  cursor: pointer;
++  display: inline-flex;
++  align-items: center;
++  gap: 8px;
++  transition: all 0.15s ease;
++}
++
++.btn-primary:hover {
++  background: #bef264;
++}
++
++.btn-primary:disabled {
++  opacity: 0.5;
++  cursor: not-allowed;
++}
++
++.form-card {
++  background: #ffffff;
++  border: 1px solid #e2e8f0;
++  border-radius: 14px;
++  padding: 24px;
++  margin-bottom: 20px;
++}
++
++.form-card h2 {
++  font-size: 15px;
++  font-weight: 700;
++  color: #0f172a;
++  margin: 0 0 16px;
++}
++
++.form-row {
++  display: grid;
++  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
++  gap: 14px;
++  margin-bottom: 16px;
++}
++
++.form-field label {
++  font-size: 12px;
++  font-weight: 600;
++  color: #64748b;
++  text-transform: uppercase;
++  letter-spacing: 0.04em;
++  display: block;
++  margin-bottom: 6px;
++}
++
++.form-field input,
++.form-field select {
++  width: 100%;
++  border: 1px solid #e2e8f0;
++  border-radius: 10px;
++  padding: 11px 14px;
++  font-size: 13px;
++  box-sizing: border-box;
++  color: #0f172a;
++  background: #f8fafc;
++}
++
++.form-field input:focus,
++.form-field select:focus {
++  outline: none;
++  border-color: #a3e635;
++  box-shadow: 0 0 0 3px rgba(163, 230, 53, 0.15);
++}
++
++.table-wrapper {
++  background: #ffffff;
++  border: 1px solid #e2e8f0;
++  border-radius: 14px;
++  overflow: hidden;
++}
++
++.data-table {
++  width: 100%;
++  border-collapse: collapse;
++  font-size: 13px;
++}
++
++.data-table th {
++  text-align: left;
++  font-size: 11px;
++  text-transform: uppercase;
++  letter-spacing: 0.04em;
++  color: #94a3b8;
++  font-weight: 600;
++  padding: 12px 16px;
++  background: #f8fafc;
++  border-bottom: 1px solid #e2e8f0;
++}
++
++.data-table td {
++  padding: 12px 16px;
++  border-bottom: 1px solid #f1f5f9;
++  color: #0f172a;
++  vertical-align: middle;
++}
++
++.data-table tr:last-child td {
++  border-bottom: none;
++}
++
++.mono {
++  font-family: 'Courier New', monospace;
++  font-size: 12px;
++}
++
++.sub-text {
++  color: #94a3b8;
++  font-size: 11px;
++}
++
++.type-badge {
++  display: inline-block;
++  border-radius: 999px;
++  padding: 3px 10px;
++  font-size: 11px;
++  font-weight: 700;
++  text-transform: uppercase;
++  letter-spacing: 0.03em;
++  background: #e0f2fe;
++  color: #0369a1;
++}
++
++.type-badge.epargne {
++  background: #fef9c3;
++  color: #a16207;
++}
+diff --git a/bank-frontend/src/app/features/admin/accounts/admin-accounts.component.html b/bank-frontend/src/app/features/admin/accounts/admin-accounts.component.html
+new file mode 100644
+index 0000000..9c5d984
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/accounts/admin-accounts.component.html
+@@ -0,0 +1,92 @@
++<div class="page-header">
++  <h1 class="page-title">Gestion des comptes</h1>
++  <button class="btn-primary" (click)="toggleForm()">
++    <i class="ti" [class.ti-plus]="!showForm()" [class.ti-x]="showForm()"></i>
++    {{ showForm() ? 'Annuler' : 'Nouveau compte' }}
++  </button>
++</div>
++
++@if (successMessage()) {
++  <div class="alert-success"><i class="ti ti-circle-check"></i> {{ successMessage() }}</div>
++}
++@if (error()) {
++  <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
++}
++
++@if (showForm()) {
++  <div class="form-card">
++    <h2>Nouveau compte</h2>
++    <form [formGroup]="form" (ngSubmit)="submit()">
++
++      <div class="form-row">
++        <div class="form-field">
++          <label>Client</label>
++          <select formControlName="clientId">
++            @for (client of clients(); track client.id) {
++              <option [value]="client.id">{{ client.firstName }} {{ client.lastName }} — {{ client.email }}</option>
++            }
++          </select>
++        </div>
++        <div class="form-field">
++          <label>Type de compte</label>
++          <select formControlName="type">
++            <option value="COURANT">Compte courant</option>
++            <option value="EPARGNE">Compte épargne</option>
++          </select>
++        </div>
++        <div class="form-field">
++          <label>Solde initial (DT)</label>
++          <input type="number" step="0.001" min="0" formControlName="initialBalance" />
++        </div>
++      </div>
++
++      @if (createError()) {
++        <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ createError() }}</div>
++      }
++
++      <button type="submit" class="btn-primary" [disabled]="createLoading()">
++        @if (createLoading()) { Création en cours... } @else { Créer le compte }
++      </button>
++    </form>
++  </div>
++}
++
++@if (loading()) {
++  <div class="loading-state">Chargement des comptes...</div>
++} @else {
++  <div class="table-wrapper">
++    <table class="data-table">
++      <thead>
++        <tr>
++          <th>N° de compte</th>
++          <th>Titulaire</th>
++          <th>Type</th>
++          <th>Solde</th>
++          <th>Créé le</th>
++        </tr>
++      </thead>
++      <tbody>
++        @for (account of accounts(); track account.id) {
++          <tr>
++            <td class="mono">{{ account.accountNumber }}</td>
++            <td>
++              {{ account.clientFullName }}
++              <div class="sub-text">{{ account.clientEmail }}</div>
++            </td>
++            <td>
++              <span class="type-badge" [class.epargne]="account.type === 'EPARGNE'">
++                {{ account.type === 'COURANT' ? 'Courant' : 'Épargne' }}
++              </span>
++            </td>
++            <td>{{ account.balance | number:'1.3-3':'fr' }} DT</td>
++            <td>{{ account.createdAt | date:'dd/MM/yyyy' }}</td>
++          </tr>
++        }
++      </tbody>
++    </table>
++
++    @if (accounts().length === 0) {
++      <div class="empty-state">Aucun compte pour le moment.</div>
++    }
++  </div>
++}
+diff --git a/bank-frontend/src/app/features/admin/accounts/admin-accounts.component.ts b/bank-frontend/src/app/features/admin/accounts/admin-accounts.component.ts
+new file mode 100644
+index 0000000..1521bd9
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/accounts/admin-accounts.component.ts
+@@ -0,0 +1,103 @@
++import { Component, OnInit, signal } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
++import { AdminAccountService } from '../../../core/services/admin-account.service';
++import { AdminAccount, AdminClient } from '../../../core/models/admin-account.model';
++
++@Component({
++  selector: 'app-admin-accounts',
++  standalone: true,
++  imports: [CommonModule, ReactiveFormsModule],
++  templateUrl: './admin-accounts.component.html',
++  styleUrl: './admin-accounts.component.css'
++})
++export class AdminAccountsComponent implements OnInit {
++
++  accounts = signal<AdminAccount[]>([]);
++  clients = signal<AdminClient[]>([]);
++  loading = signal(true);
++  error = signal<string | null>(null);
++
++  showForm = signal(false);
++  createLoading = signal(false);
++  createError = signal<string | null>(null);
++  successMessage = signal<string | null>(null);
++
++  form: FormGroup;
++
++  constructor(
++    private fb: FormBuilder,
++    private adminAccountService: AdminAccountService
++  ) {
++    this.form = this.fb.group({
++      clientId: ['', Validators.required],
++      type: ['COURANT', Validators.required],
++      initialBalance: [0, [Validators.required, Validators.min(0)]]
++    });
++  }
++
++  ngOnInit(): void {
++    this.loadData();
++  }
++
++  loadData(): void {
++    this.loading.set(true);
++    this.error.set(null);
++
++    this.adminAccountService.getAllAccounts().subscribe({
++      next: (accounts) => {
++        this.accounts.set(accounts);
++        this.loading.set(false);
++      },
++      error: () => {
++        this.error.set("Impossible de charger les comptes.");
++        this.loading.set(false);
++      }
++    });
++
++    this.adminAccountService.getAllClients().subscribe({
++      next: (clients) => {
++        this.clients.set(clients);
++        if (clients.length > 0 && !this.form.value.clientId) {
++          this.form.patchValue({ clientId: clients[0].id });
++        }
++      }
++    });
++  }
++
++  toggleForm(): void {
++    this.showForm.update(v => !v);
++    this.createError.set(null);
++  }
++
++  submit(): void {
++    if (this.form.invalid) {
++      this.form.markAllAsTouched();
++      return;
++    }
++
++    this.createLoading.set(true);
++    this.createError.set(null);
++
++    const value = this.form.value;
++
++    this.adminAccountService.createAccount({
++      clientId: Number(value.clientId),
++      type: value.type,
++      initialBalance: Number(value.initialBalance)
++    }).subscribe({
++      next: () => {
++        this.createLoading.set(false);
++        this.showForm.set(false);
++        this.form.patchValue({ type: 'COURANT', initialBalance: 0 });
++        this.successMessage.set('Compte créé avec succès.');
++        this.loadData();
++        setTimeout(() => this.successMessage.set(null), 4000);
++      },
++      error: (err) => {
++        this.createLoading.set(false);
++        this.createError.set(err.error?.message || 'Une erreur est survenue lors de la création du compte.');
++      }
++    });
++  }
++}
+diff --git a/bank-frontend/src/app/features/admin/dashboard/admin-dashboard.component.html b/bank-frontend/src/app/features/admin/dashboard/admin-dashboard.component.html
+index f55fca1..057a45e 100644
+--- a/bank-frontend/src/app/features/admin/dashboard/admin-dashboard.component.html
++++ b/bank-frontend/src/app/features/admin/dashboard/admin-dashboard.component.html
+@@ -54,6 +54,16 @@
+       <span>Gérer les utilisateurs</span>
+       <i class="ti ti-arrow-right"></i>
+     </a>
++    <a routerLink="/admin/accounts" class="quick-link">
++      <i class="ti ti-credit-card"></i>
++      <span>Gérer les comptes</span>
++      <i class="ti ti-arrow-right"></i>
++    </a>
++    <a routerLink="/admin/transactions" class="quick-link">
++      <i class="ti ti-list-details"></i>
++      <span>Surveiller les transactions</span>
++      <i class="ti ti-arrow-right"></i>
++    </a>
+     <a routerLink="/admin/credits" class="quick-link">
+       <i class="ti ti-receipt-2"></i>
+       <span>Traiter les demandes de crédit</span>
+diff --git a/bank-frontend/src/app/features/admin/transactions/admin-transactions.component.css b/bank-frontend/src/app/features/admin/transactions/admin-transactions.component.css
+new file mode 100644
+index 0000000..fed3f54
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/transactions/admin-transactions.component.css
+@@ -0,0 +1,162 @@
++.page-title {
++  font-size: 20px;
++  font-weight: 700;
++  color: #0f172a;
++  margin: 0 0 20px;
++}
++
++.alert-error {
++  background: #fef2f2;
++  color: #dc2626;
++  border-radius: 10px;
++  padding: 12px 16px;
++  font-size: 13px;
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  margin-bottom: 16px;
++}
++
++.loading-state, .empty-state {
++  background: #ffffff;
++  border-radius: 14px;
++  padding: 48px;
++  text-align: center;
++  color: #64748b;
++  font-size: 14px;
++}
++
++.form-card {
++  background: #ffffff;
++  border: 1px solid #e2e8f0;
++  border-radius: 14px;
++  padding: 24px;
++  margin-bottom: 20px;
++}
++
++.form-card h2 {
++  font-size: 15px;
++  font-weight: 700;
++  color: #0f172a;
++  margin: 0 0 16px;
++}
++
++.form-row {
++  display: grid;
++  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
++  gap: 14px;
++  margin-bottom: 16px;
++}
++
++.form-field label {
++  font-size: 12px;
++  font-weight: 600;
++  color: #64748b;
++  text-transform: uppercase;
++  letter-spacing: 0.04em;
++  display: block;
++  margin-bottom: 6px;
++}
++
++.form-field input,
++.form-field select {
++  width: 100%;
++  border: 1px solid #e2e8f0;
++  border-radius: 10px;
++  padding: 11px 14px;
++  font-size: 13px;
++  box-sizing: border-box;
++  color: #0f172a;
++  background: #f8fafc;
++}
++
++.form-field input:focus,
++.form-field select:focus {
++  outline: none;
++  border-color: #a3e635;
++  box-shadow: 0 0 0 3px rgba(163, 230, 53, 0.15);
++}
++
++.filter-actions {
++  display: flex;
++  gap: 10px;
++}
++
++.btn-primary {
++  background: #a3e635;
++  color: #030d08;
++  border: none;
++  padding: 11px 18px;
++  border-radius: 10px;
++  font-size: 13px;
++  font-weight: 700;
++  cursor: pointer;
++  display: inline-flex;
++  align-items: center;
++  gap: 8px;
++}
++
++.btn-primary:hover {
++  background: #bef264;
++}
++
++.btn-secondary {
++  background: #f1f5f9;
++  color: #0f172a;
++  border: 1px solid #e2e8f0;
++  padding: 10px 16px;
++  border-radius: 10px;
++  font-size: 13px;
++  font-weight: 600;
++  cursor: pointer;
++}
++
++.btn-secondary:hover {
++  background: #e2e8f0;
++}
++
++.table-wrapper {
++  background: #ffffff;
++  border: 1px solid #e2e8f0;
++  border-radius: 14px;
++  overflow: hidden;
++}
++
++.data-table {
++  width: 100%;
++  border-collapse: collapse;
++  font-size: 13px;
++}
++
++.data-table th {
++  text-align: left;
++  font-size: 11px;
++  text-transform: uppercase;
++  letter-spacing: 0.04em;
++  color: #94a3b8;
++  font-weight: 600;
++  padding: 12px 16px;
++  background: #f8fafc;
++  border-bottom: 1px solid #e2e8f0;
++}
++
++.data-table td {
++  padding: 12px 16px;
++  border-bottom: 1px solid #f1f5f9;
++  color: #0f172a;
++  vertical-align: middle;
++}
++
++.data-table tr:last-child td {
++  border-bottom: none;
++}
++
++.mono {
++  font-family: 'Courier New', monospace;
++  font-size: 12px;
++}
++
++.sub-text {
++  color: #94a3b8;
++  font-size: 11px;
++}
+diff --git a/bank-frontend/src/app/features/admin/transactions/admin-transactions.component.html b/bank-frontend/src/app/features/admin/transactions/admin-transactions.component.html
+new file mode 100644
+index 0000000..d7f1e40
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/transactions/admin-transactions.component.html
+@@ -0,0 +1,82 @@
++<h1 class="page-title">Surveillance des transactions</h1>
++
++<div class="form-card">
++  <h2>Filtres</h2>
++  <form [formGroup]="filterForm" (ngSubmit)="search()">
++    <div class="form-row">
++      <div class="form-field">
++        <label>Date de début</label>
++        <input type="date" formControlName="startDate" />
++      </div>
++      <div class="form-field">
++        <label>Date de fin</label>
++        <input type="date" formControlName="endDate" />
++      </div>
++      <div class="form-field">
++        <label>Type</label>
++        <select formControlName="type">
++          <option value="">Tous</option>
++          <option value="DEPOT">Dépôt</option>
++          <option value="RETRAIT">Retrait</option>
++          <option value="VIREMENT_ENTRANT">Virement entrant</option>
++          <option value="VIREMENT_SORTANT">Virement sortant</option>
++        </select>
++      </div>
++      <div class="form-field">
++        <label>N° de compte</label>
++        <input type="text" formControlName="accountNumber" placeholder="07807..." />
++      </div>
++    </div>
++
++    <div class="filter-actions">
++      <button type="submit" class="btn-primary">
++        <i class="ti ti-filter"></i> Filtrer
++      </button>
++      <button type="button" class="btn-secondary" (click)="resetFilters()">
++        Réinitialiser
++      </button>
++    </div>
++  </form>
++</div>
++
++@if (error()) {
++  <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
++}
++
++@if (loading()) {
++  <div class="loading-state">Chargement des transactions...</div>
++} @else {
++  <div class="table-wrapper">
++    <table class="data-table">
++      <thead>
++        <tr>
++          <th>Date</th>
++          <th>Compte</th>
++          <th>Client</th>
++          <th>Type</th>
++          <th>Montant</th>
++          <th>Solde après</th>
++        </tr>
++      </thead>
++      <tbody>
++        @for (t of transactions(); track t.id) {
++          <tr>
++            <td>{{ t.date | date:'dd/MM/yyyy HH:mm' }}</td>
++            <td class="mono">{{ t.accountNumber }}</td>
++            <td>
++              {{ t.clientFullName }}
++              <div class="sub-text">{{ t.clientEmail }}</div>
++            </td>
++            <td>{{ t.type }}</td>
++            <td>{{ t.amount | number:'1.3-3':'fr' }} DT</td>
++            <td>{{ t.balanceAfter | number:'1.3-3':'fr' }} DT</td>
++          </tr>
++        }
++      </tbody>
++    </table>
++
++    @if (transactions().length === 0) {
++      <div class="empty-state">Aucune transaction ne correspond à ces critères.</div>
++    }
++  </div>
++}
+diff --git a/bank-frontend/src/app/features/admin/transactions/admin-transactions.component.ts b/bank-frontend/src/app/features/admin/transactions/admin-transactions.component.ts
+new file mode 100644
+index 0000000..2c7e49e
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/transactions/admin-transactions.component.ts
+@@ -0,0 +1,65 @@
++import { Component, OnInit, signal } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
++import { AdminAccountService } from '../../../core/services/admin-account.service';
++import { AdminTransaction } from '../../../core/models/admin-account.model';
++
++@Component({
++  selector: 'app-admin-transactions',
++  standalone: true,
++  imports: [CommonModule, ReactiveFormsModule],
++  templateUrl: './admin-transactions.component.html',
++  styleUrl: './admin-transactions.component.css'
++})
++export class AdminTransactionsComponent implements OnInit {
++
++  transactions = signal<AdminTransaction[]>([]);
++  loading = signal(true);
++  error = signal<string | null>(null);
++
++  filterForm: FormGroup;
++
++  constructor(
++    private fb: FormBuilder,
++    private adminAccountService: AdminAccountService
++  ) {
++    this.filterForm = this.fb.group({
++      startDate: [''],
++      endDate: [''],
++      type: [''],
++      accountNumber: ['']
++    });
++  }
++
++  ngOnInit(): void {
++    this.search();
++  }
++
++  search(): void {
++    this.loading.set(true);
++    this.error.set(null);
++
++    const value = this.filterForm.value;
++
++    this.adminAccountService.getTransactions({
++      startDate: value.startDate || undefined,
++      endDate: value.endDate || undefined,
++      type: value.type || undefined,
++      accountNumber: value.accountNumber || undefined
++    }).subscribe({
++      next: (transactions) => {
++        this.transactions.set(transactions);
++        this.loading.set(false);
++      },
++      error: () => {
++        this.error.set("Impossible de charger les transactions.");
++        this.loading.set(false);
++      }
++    });
++  }
++
++  resetFilters(): void {
++    this.filterForm.reset({ startDate: '', endDate: '', type: '', accountNumber: '' });
++    this.search();
++  }
++}
+diff --git a/bank-frontend/src/app/shared/layout/layout.component.html b/bank-frontend/src/app/shared/layout/layout.component.html
+index fda0ce1..6a6a224 100644
+--- a/bank-frontend/src/app/shared/layout/layout.component.html
++++ b/bank-frontend/src/app/shared/layout/layout.component.html
+@@ -32,6 +32,12 @@
+         <a routerLink="/admin/users" routerLinkActive="active" class="nav-item">
+           <i class="ti ti-users"></i> Utilisateurs
+         </a>
++        <a routerLink="/admin/accounts" routerLinkActive="active" class="nav-item">
++          <i class="ti ti-credit-card"></i> Comptes
++        </a>
++        <a routerLink="/admin/transactions" routerLinkActive="active" class="nav-item">
++          <i class="ti ti-list-details"></i> Transactions
++        </a>
+         <a routerLink="/admin/credits" routerLinkActive="active" class="nav-item">
+           <i class="ti ti-receipt-2"></i> Crédits à traiter
+         </a>
