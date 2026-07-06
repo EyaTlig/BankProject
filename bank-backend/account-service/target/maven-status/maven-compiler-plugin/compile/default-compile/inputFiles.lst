@@ -1,8 +1,12 @@
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\AccountServiceApplication.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\AccountResponse.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\AccountService.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\AdminAccountResponse.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\AdminAccountService.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\AdminClientResponse.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\AdminCreateAccountRequest.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\AdminStatsResponse.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\AdminTransactionResponse.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\BulkTransferItemResult.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\BulkTransferService.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\ConfirmBulkTransferRequest.java
@@ -10,6 +14,7 @@ C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\ja
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\ConfirmTransferRequest.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\ConfirmTransferResponse.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\CreateRecurringTransferRequest.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\CreditAccountRequest.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\InitiateBulkTransferResponse.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\InitiateTransferRequest.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\InitiateTransferResponse.java

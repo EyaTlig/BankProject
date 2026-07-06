@@ -14,7 +14,10 @@ import {adminGuard} from './core/guards/admin.guard';
 import {clientOnlyGuard} from './core/guards/client-only.guard';
 import {AdminDashboardComponent} from './features/admin/dashboard/admin-dashboard.component';
 import {AdminUsersComponent} from './features/admin/users/admin-users.component';
+import {AdminAuditLogsComponent} from './features/admin/audit-logs/admin-audit-logs.component';
 import {AdminCreditsComponent} from './features/admin/credits/admin-credits.component';
+import {AdminAccountsComponent} from './features/admin/accounts/admin-accounts.component';
+import {AdminTransactionsComponent} from './features/admin/transactions/admin-transactions.component';
 import {BulkTransferComponent} from './features/bulk-transfers/bulk-transfer.component';
 
 export const routes: Routes = [
@@ -40,6 +43,9 @@ export const routes: Routes = [
           { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
           { path: 'dashboard', component: AdminDashboardComponent },
           { path: 'users', component: AdminUsersComponent },
+          { path: 'audit-logs', component: AdminAuditLogsComponent },
+          { path: 'accounts', component: AdminAccountsComponent },
+          { path: 'transactions', component: AdminTransactionsComponent },
           { path: 'credits', component: AdminCreditsComponent }
         ]
       }

@@ -1,7 +1,9 @@
 tn\bank\accountservice\infrastructure\SecurityConfig.class
 tn\bank\accountservice\infrastructure\ClientRepository.class
 tn\bank\accountservice\presentation\BulkTransferController.class
+tn\bank\accountservice\application\AdminAccountResponse.class
 tn\bank\accountservice\application\InitiateTransferResponse.class
+tn\bank\accountservice\application\AdminClientResponse.class
 tn\bank\accountservice\domain\Client.class
 tn\bank\accountservice\domain\RecurringTransfer$RecurringTransferBuilder.class
 tn\bank\accountservice\presentation\AdminAccountController.class
@@ -39,6 +41,7 @@ tn\bank\accountservice\application\TransferService.class
 tn\bank\accountservice\domain\TransactionType.class
 tn\bank\accountservice\application\ConfirmBulkTransferResponse.class
 tn\bank\accountservice\domain\BulkTransferItem$BulkTransferItemBuilder.class
+tn\bank\accountservice\application\AdminCreateAccountRequest.class
 tn\bank\accountservice\infrastructure\UserCreatedListener.class
 tn\bank\accountservice\domain\AccountType.class
 tn\bank\accountservice\infrastructure\RecurringTransferScheduler.class
@@ -55,5 +58,7 @@ tn\bank\accountservice\infrastructure\TransactionRepository.class
 tn\bank\accountservice\domain\Transaction$TransactionBuilder.class
 tn\bank\accountservice\infrastructure\JwtAuthFilter.class
 tn\bank\accountservice\infrastructure\RabbitMQConfig.class
+tn\bank\accountservice\application\AdminTransactionResponse.class
 tn\bank\accountservice\application\UserCreatedEvent.class
+tn\bank\accountservice\application\CreditAccountRequest.class
 tn\bank\accountservice\domain\RecurringFrequency.class

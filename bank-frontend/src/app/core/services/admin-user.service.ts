@@ -5,13 +5,15 @@ import {
   AdminUserResponse,
   UpdateUserStatusRequest,
   UpdateUserRoleRequest,
-  ResetPasswordResponse
+  ResetPasswordResponse,
+  AuditLogEntry
 } from '../models/admin-user.model';
 
 @Injectable({ providedIn: 'root' })
 export class AdminUserService {
 
   private readonly baseUrl = 'http://localhost:8081/api/admin/users';
+  private readonly adminBaseUrl = 'http://localhost:8081/api/admin';
 
   constructor(private http: HttpClient) {}
 
@@ -33,5 +35,9 @@ export class AdminUserService {
 
   resetPassword(id: number): Observable<ResetPasswordResponse> {
     return this.http.patch<ResetPasswordResponse>(`${this.baseUrl}/${id}/reset-password`, {});
+  }
+
+  getAuditLogs(): Observable<AuditLogEntry[]> {
+    return this.http.get<AuditLogEntry[]>(`${this.adminBaseUrl}/audit-logs`);
   }
 }

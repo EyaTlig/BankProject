@@ -17,7 +17,7 @@ export class AdminUsersComponent implements OnInit {
   error = signal<string | null>(null);
 
   actionPendingId = signal<number | null>(null);
-  tempPasswordFor = signal<{ id: number; password: string } | null>(null);
+  resetPasswordSuccessFor = signal<number | null>(null);
   confirmDeleteId = signal<number | null>(null);
 
   constructor(private adminUserService: AdminUserService) {}
@@ -80,9 +80,14 @@ export class AdminUsersComponent implements OnInit {
   resetPassword(user: AdminUserResponse): void {
     this.actionPendingId.set(user.id);
     this.adminUserService.resetPassword(user.id).subscribe({
-      next: (response) => {
-        this.tempPasswordFor.set({ id: user.id, password: response.temporaryPassword });
+      next: () => {
+        this.resetPasswordSuccessFor.set(user.id);
         this.actionPendingId.set(null);
+        setTimeout(() => {
+          if (this.resetPasswordSuccessFor() === user.id) {
+            this.resetPasswordSuccessFor.set(null);
+          }
+        }, 5000);
       },
       error: () => {
         this.error.set("Impossible de réinitialiser le mot de passe.");
@@ -91,8 +96,8 @@ export class AdminUsersComponent implements OnInit {
     });
   }
 
-  closeTempPassword(): void {
-    this.tempPasswordFor.set(null);
+  closeResetPasswordSuccess(): void {
+    this.resetPasswordSuccessFor.set(null);
   }
 
   askDeleteConfirmation(userId: number): void {

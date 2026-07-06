@@ -19,5 +19,13 @@ export interface UpdateUserRoleRequest {
 
 export interface ResetPasswordResponse {
   message: string;
-  temporaryPassword: string;
+}
+
+export interface AuditLogEntry {
+  id: number;
+  action: string;
+  targetEmail: string | null;
+  performedBy: string;
+  details: string | null;
+  createdAt: string;
 }
