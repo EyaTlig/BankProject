@@ -2,6 +2,11 @@ export type CreditType = 'PERSONNEL' | 'IMMOBILIER' | 'AUTO' | 'PROFESSIONNEL';
 
 export type CreditStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
+export interface UpdateCreditStatusRequest {
+  status: CreditStatus;
+  adminComment?: string;
+}
+
 export interface SimulationRequest {
   amount: number;
   durationMonths: number;

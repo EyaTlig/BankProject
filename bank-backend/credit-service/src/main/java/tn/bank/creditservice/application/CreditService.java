@@ -66,6 +66,12 @@ public class CreditService {
         return toResponse(creditRequestRepository.save(creditRequest));
     }
 
+    public List<CreditRequestResponse> getAllCreditRequests() {
+        return creditRequestRepository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public List<CreditRequestResponse> getMyCreditRequests(String email) {
         return creditRequestRepository.findByClientEmailOrderByCreatedAtDesc(email)
                 .stream()

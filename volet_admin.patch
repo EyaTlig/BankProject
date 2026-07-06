@@ -1,0 +1,4030 @@
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminAccountResponse.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminAccountResponse.java
+new file mode 100644
+index 0000000..fa6431c
+--- /dev/null
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminAccountResponse.java
+@@ -0,0 +1,24 @@
++package tn.bank.accountservice.application;
++
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import lombok.NoArgsConstructor;
++import tn.bank.accountservice.domain.AccountType;
++
++import java.math.BigDecimal;
++import java.time.LocalDateTime;
++
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
++public class AdminAccountResponse {
++
++    private Long id;
++    private String accountNumber;
++    private AccountType type;
++    private BigDecimal balance;
++    private LocalDateTime createdAt;
++    private Long clientId;
++    private String clientEmail;
++    private String clientFullName;
++}
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminAccountService.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminAccountService.java
+new file mode 100644
+index 0000000..e355527
+--- /dev/null
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminAccountService.java
+@@ -0,0 +1,189 @@
++package tn.bank.accountservice.application;
++
++import lombok.RequiredArgsConstructor;
++import org.springframework.stereotype.Service;
++import org.springframework.transaction.annotation.Transactional;
++import tn.bank.accountservice.domain.Account;
++import tn.bank.accountservice.domain.Client;
++import tn.bank.accountservice.domain.Transaction;
++import tn.bank.accountservice.domain.TransactionType;
++import tn.bank.accountservice.infrastructure.AccountRepository;
++import tn.bank.accountservice.infrastructure.ClientRepository;
++import tn.bank.accountservice.infrastructure.TransactionRepository;
++
++import java.math.BigDecimal;
++import java.math.BigInteger;
++import java.time.LocalDate;
++import java.time.LocalDateTime;
++import java.util.Comparator;
++import java.util.List;
++import java.util.UUID;
++
++@Service
++@RequiredArgsConstructor
++public class AdminAccountService {
++
++    private static final String CODE_BANQUE_AMEN = "07";
++    private static final String CODE_AGENCE = "807";
++    private static final int MAX_ACCOUNT_NUMBER_ATTEMPTS = 10;
++
++    private final ClientRepository clientRepository;
++    private final AccountRepository accountRepository;
++    private final TransactionRepository transactionRepository;
++
++    public List<AdminClientResponse> getAllClients() {
++        return clientRepository.findAll().stream()
++                .map(client -> new AdminClientResponse(
++                        client.getId(),
++                        client.getEmail(),
++                        client.getFirstName(),
++                        client.getLastName(),
++                        client.getAccounts().size(),
++                        client.getAccounts().stream()
++                                .map(Account::getBalance)
++                                .reduce(BigDecimal.ZERO, BigDecimal::add)
++                ))
++                .toList();
++    }
++
++    public List<AdminAccountResponse> getAllAccounts() {
++        return accountRepository.findAll().stream()
++                .map(this::toAccountResponse)
++                .toList();
++    }
++
++    @Transactional
++    public AdminAccountResponse createAccount(AdminCreateAccountRequest request) {
++
++        Client client = clientRepository.findById(request.getClientId())
++                .orElseThrow(() -> new IllegalArgumentException("Client introuvable"));
++
++        BigDecimal initialBalance = request.getInitialBalance() != null
++                ? request.getInitialBalance()
++                : BigDecimal.ZERO;
++
++        Account account = Account.builder()
++                .accountNumber(generateUniqueAccountNumber())
++                .type(request.getType())
++                .balance(initialBalance)
++                .createdAt(LocalDateTime.now())
++                .client(client)
++                .build();
++
++        Account savedAccount = accountRepository.save(account);
++
++        return toAccountResponse(savedAccount);
++    }
++
++    public List<AdminTransactionResponse> getTransactions(
++            LocalDate startDate,
++            LocalDate endDate,
++            TransactionType type,
++            String accountNumber
++    ) {
++        return accountRepository.findAll().stream()
++                .flatMap(account -> transactionRepository.findByAccountOrderByDateDesc(account).stream())
++                .filter(t -> startDate == null || !t.getDate().toLocalDate().isBefore(startDate))
++                .filter(t -> endDate == null || !t.getDate().toLocalDate().isAfter(endDate))
++                .filter(t -> type == null || t.getType() == type)
++                .filter(t -> accountNumber == null || accountNumber.isBlank()
++                        || t.getAccount().getAccountNumber().equalsIgnoreCase(accountNumber))
++                .sorted(Comparator.comparing(Transaction::getDate).reversed())
++                .map(this::toTransactionResponse)
++                .toList();
++    }
++
++    public AdminDashboardStatsResponse getDashboardStats() {
++
++        List<Account> accounts = accountRepository.findAll();
++        List<Transaction> allTransactions = accounts.stream()
++                .flatMap(account -> transactionRepository.findByAccountOrderByDateDesc(account).stream())
++                .toList();
++
++        LocalDate today = LocalDate.now();
++
++        long transactionsToday = allTransactions.stream()
++                .filter(t -> t.getDate().toLocalDate().isEqual(today))
++                .count();
++
++        BigDecimal totalBalance = accounts.stream()
++                .map(Account::getBalance)
++                .reduce(BigDecimal.ZERO, BigDecimal::add);
++
++        long totalCourant = accounts.stream()
++                .filter(a -> a.getType().name().equals("COURANT"))
++                .count();
++
++        long totalEpargne = accounts.stream()
++                .filter(a -> a.getType().name().equals("EPARGNE"))
++                .count();
++
++        return new AdminDashboardStatsResponse(
++                clientRepository.count(),
++                accounts.size(),
++                totalCourant,
++                totalEpargne,
++                totalBalance,
++                transactionsToday,
++                allTransactions.size()
++        );
++    }
++
++    private AdminAccountResponse toAccountResponse(Account account) {
++        Client client = account.getClient();
++        return new AdminAccountResponse(
++                account.getId(),
++                account.getAccountNumber(),
++                account.getType(),
++                account.getBalance(),
++                account.getCreatedAt(),
++                client.getId(),
++                client.getEmail(),
++                client.getFirstName() + " " + client.getLastName()
++        );
++    }
++
++    private AdminTransactionResponse toTransactionResponse(Transaction transaction) {
++        Client client = transaction.getAccount().getClient();
++        return new AdminTransactionResponse(
++                transaction.getId(),
++                transaction.getType(),
++                transaction.getAmount(),
++                transaction.getBalanceAfter(),
++                transaction.getDate(),
++                transaction.getAccount().getAccountNumber(),
++                client.getEmail(),
++                client.getFirstName() + " " + client.getLastName()
++        );
++    }
++
++    private String generateUniqueAccountNumber() {
++        String accountNumber;
++        int attempts = 0;
++
++        do {
++            accountNumber = generateAccountNumber();
++            attempts++;
++            if (attempts >= MAX_ACCOUNT_NUMBER_ATTEMPTS) {
++                throw new IllegalStateException(
++                        "Impossible de générer un numéro de compte unique après " + MAX_ACCOUNT_NUMBER_ATTEMPTS + " tentatives"
++                );
++            }
++        } while (accountRepository.findByAccountNumber(accountNumber).isPresent());
++
++        return accountNumber;
++    }
++
++    private String generateAccountNumber() {
++        String numeroCompte = String.format("%013d", Math.abs(UUID.randomUUID().getMostSignificantBits()) % 10_000_000_000_000L);
++        String ribSansCle = CODE_BANQUE_AMEN + CODE_AGENCE + numeroCompte;
++        String cleRib = calculerCleRib(ribSansCle);
++        return ribSansCle + cleRib;
++    }
++
++    private String calculerCleRib(String ribSansCle) {
++        long modulo = new BigInteger(ribSansCle).mod(BigInteger.valueOf(97)).longValue();
++        long cle = 97 - modulo;
++        return String.format("%02d", cle);
++    }
++}
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminClientResponse.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminClientResponse.java
+new file mode 100644
+index 0000000..b5a3fe4
+--- /dev/null
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminClientResponse.java
+@@ -0,0 +1,20 @@
++package tn.bank.accountservice.application;
++
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import lombok.NoArgsConstructor;
++
++import java.math.BigDecimal;
++
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
++public class AdminClientResponse {
++
++    private Long id;
++    private String email;
++    private String firstName;
++    private String lastName;
++    private int accountCount;
++    private BigDecimal totalBalance;
++}
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminCreateAccountRequest.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminCreateAccountRequest.java
+new file mode 100644
+index 0000000..ee35754
+--- /dev/null
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminCreateAccountRequest.java
+@@ -0,0 +1,25 @@
++package tn.bank.accountservice.application;
++
++import jakarta.validation.constraints.DecimalMin;
++import jakarta.validation.constraints.NotNull;
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import lombok.NoArgsConstructor;
++import tn.bank.accountservice.domain.AccountType;
++
++import java.math.BigDecimal;
++
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
++public class AdminCreateAccountRequest {
++
++    @NotNull(message = "Le client est obligatoire")
++    private Long clientId;
++
++    @NotNull(message = "Le type de compte est obligatoire")
++    private AccountType type;
++
++    @DecimalMin(value = "0.0", inclusive = true, message = "Le solde initial ne peut pas être négatif")
++    private BigDecimal initialBalance;
++}
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminDashboardStatsResponse.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminDashboardStatsResponse.java
+new file mode 100644
+index 0000000..bce199a
+--- /dev/null
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminDashboardStatsResponse.java
+@@ -0,0 +1,21 @@
++package tn.bank.accountservice.application;
++
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import lombok.NoArgsConstructor;
++
++import java.math.BigDecimal;
++
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
++public class AdminDashboardStatsResponse {
++
++    private long totalClients;
++    private long totalAccounts;
++    private long totalCourantAccounts;
++    private long totalEpargneAccounts;
++    private BigDecimal totalBalance;
++    private long transactionsToday;
++    private long transactionsTotal;
++}
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminTransactionResponse.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminTransactionResponse.java
+new file mode 100644
+index 0000000..560637a
+--- /dev/null
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/application/AdminTransactionResponse.java
+@@ -0,0 +1,24 @@
++package tn.bank.accountservice.application;
++
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import lombok.NoArgsConstructor;
++import tn.bank.accountservice.domain.TransactionType;
++
++import java.math.BigDecimal;
++import java.time.LocalDateTime;
++
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
++public class AdminTransactionResponse {
++
++    private Long id;
++    private TransactionType type;
++    private BigDecimal amount;
++    private BigDecimal balanceAfter;
++    private LocalDateTime date;
++    private String accountNumber;
++    private String clientEmail;
++    private String clientFullName;
++}
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/infrastructure/JwtAuthFilter.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/infrastructure/JwtAuthFilter.java
+index 8d427ed..07f085e 100644
+--- a/bank-backend/account-service/src/main/java/tn/bank/accountservice/infrastructure/JwtAuthFilter.java
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/infrastructure/JwtAuthFilter.java
+@@ -7,12 +7,14 @@ import jakarta.servlet.http.HttpServletResponse;
+ import lombok.RequiredArgsConstructor;
+ import org.springframework.lang.NonNull;
+ import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
++import org.springframework.security.core.GrantedAuthority;
++import org.springframework.security.core.authority.SimpleGrantedAuthority;
+ import org.springframework.security.core.context.SecurityContextHolder;
+ import org.springframework.stereotype.Component;
+ import org.springframework.web.filter.OncePerRequestFilter;
+ 
+ import java.io.IOException;
+-import java.util.Collections;
++import java.util.List;
+ 
+ @Component
+ @RequiredArgsConstructor
+@@ -42,10 +44,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
+             if (email != null && jwtService.isTokenValid(token, email)
+                     && SecurityContextHolder.getContext().getAuthentication() == null) {
+ 
++                String role = jwtService.extractRole(token);
++                List<GrantedAuthority> authorities = role != null
++                        ? List.of(new SimpleGrantedAuthority("ROLE_" + role))
++                        : List.of();
++
+                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                         email,
+                         null,
+-                        Collections.emptyList()
++                        authorities
+                 );
+ 
+                 SecurityContextHolder.getContext().setAuthentication(authToken);
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/infrastructure/JwtService.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/infrastructure/JwtService.java
+index d322e3e..664b8d0 100644
+--- a/bank-backend/account-service/src/main/java/tn/bank/accountservice/infrastructure/JwtService.java
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/infrastructure/JwtService.java
+@@ -24,6 +24,10 @@ public class JwtService {
+         return extractClaim(token, Claims::getSubject);
+     }
+ 
++    public String extractRole(String token) {
++        return extractClaim(token, claims -> claims.get("role", String.class));
++    }
++
+     public boolean isTokenValid(String token, String email) {
+         String extractedEmail = extractEmail(token);
+         return extractedEmail.equals(email) && !isTokenExpired(token);
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/infrastructure/SecurityConfig.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/infrastructure/SecurityConfig.java
+index 15d3ba8..3d24897 100644
+--- a/bank-backend/account-service/src/main/java/tn/bank/accountservice/infrastructure/SecurityConfig.java
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/infrastructure/SecurityConfig.java
+@@ -39,6 +39,7 @@ public class SecurityConfig {
+                 .csrf(csrf -> csrf.disable())
+                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                 .authorizeHttpRequests(auth -> auth
++                        .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+                         .anyRequest().authenticated()
+                 )
+                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+diff --git a/bank-backend/account-service/src/main/java/tn/bank/accountservice/presentation/AdminAccountController.java b/bank-backend/account-service/src/main/java/tn/bank/accountservice/presentation/AdminAccountController.java
+new file mode 100644
+index 0000000..6455190
+--- /dev/null
++++ b/bank-backend/account-service/src/main/java/tn/bank/accountservice/presentation/AdminAccountController.java
+@@ -0,0 +1,52 @@
++package tn.bank.accountservice.presentation;
++
++import jakarta.validation.Valid;
++import lombok.RequiredArgsConstructor;
++import org.springframework.format.annotation.DateTimeFormat;
++import org.springframework.http.HttpStatus;
++import org.springframework.http.ResponseEntity;
++import org.springframework.web.bind.annotation.*;
++import tn.bank.accountservice.application.*;
++import tn.bank.accountservice.domain.TransactionType;
++
++import java.time.LocalDate;
++import java.util.List;
++
++@RestController
++@RequestMapping("/api/admin")
++@RequiredArgsConstructor
++public class AdminAccountController {
++
++    private final AdminAccountService adminAccountService;
++
++    @GetMapping("/clients")
++    public ResponseEntity<List<AdminClientResponse>> getAllClients() {
++        return ResponseEntity.ok(adminAccountService.getAllClients());
++    }
++
++    @GetMapping("/accounts")
++    public ResponseEntity<List<AdminAccountResponse>> getAllAccounts() {
++        return ResponseEntity.ok(adminAccountService.getAllAccounts());
++    }
++
++    @PostMapping("/accounts")
++    public ResponseEntity<AdminAccountResponse> createAccount(@Valid @RequestBody AdminCreateAccountRequest request) {
++        AdminAccountResponse response = adminAccountService.createAccount(request);
++        return ResponseEntity.status(HttpStatus.CREATED).body(response);
++    }
++
++    @GetMapping("/transactions")
++    public ResponseEntity<List<AdminTransactionResponse>> getTransactions(
++            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
++            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
++            @RequestParam(required = false) TransactionType type,
++            @RequestParam(required = false) String accountNumber
++    ) {
++        return ResponseEntity.ok(adminAccountService.getTransactions(startDate, endDate, type, accountNumber));
++    }
++
++    @GetMapping("/dashboard/stats")
++    public ResponseEntity<AdminDashboardStatsResponse> getDashboardStats() {
++        return ResponseEntity.ok(adminAccountService.getDashboardStats());
++    }
++}
+diff --git a/bank-backend/account-service/src/main/resources/application.properties b/bank-backend/account-service/src/main/resources/application.properties
+index 3bb3014..3300fd5 100644
+--- a/bank-backend/account-service/src/main/resources/application.properties
++++ b/bank-backend/account-service/src/main/resources/application.properties
+@@ -1,6 +1,9 @@
+ spring.application.name=account-service
+ server.port=8082
+ 
++# Expose le champ "message" dans les réponses d'erreur JSON (utilisé par le frontend)
++server.error.include-message=always
++
+ spring.datasource.url=jdbc:mysql://localhost:3308/account_db
+ spring.datasource.username=root
+ spring.datasource.password=root
+@@ -28,6 +31,9 @@ spring.mail.username=82a73b7691dd2c
+ spring.mail.password=3a1d10a1123119
+ spring.mail.properties.mail.smtp.auth=true
+ spring.mail.properties.mail.smtp.starttls.enable=true
++spring.mail.properties.mail.smtp.connectiontimeout=5000
++spring.mail.properties.mail.smtp.timeout=5000
++spring.mail.properties.mail.smtp.writetimeout=5000
+ 
+ # Duree de validite du code OTP en minutes
+ transfer.otp.expiration-minutes=5
+\ No newline at end of file
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AdminCreateUserRequest.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AdminCreateUserRequest.java
+new file mode 100644
+index 0000000..1eadda2
+--- /dev/null
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AdminCreateUserRequest.java
+@@ -0,0 +1,33 @@
++package tn.bank.authservice.application;
++
++import jakarta.validation.constraints.Email;
++import jakarta.validation.constraints.NotBlank;
++import jakarta.validation.constraints.NotNull;
++import jakarta.validation.constraints.Size;
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import lombok.NoArgsConstructor;
++import tn.bank.authservice.domain.Role;
++
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
++public class AdminCreateUserRequest {
++
++    @NotBlank(message = "Le prénom est obligatoire")
++    private String firstName;
++
++    @NotBlank(message = "Le nom est obligatoire")
++    private String lastName;
++
++    @NotBlank(message = "L'email est obligatoire")
++    @Email(message = "L'email n'est pas valide")
++    private String email;
++
++    @NotBlank(message = "Le mot de passe est obligatoire")
++    @Size(min = 8, message = "Le mot de passe doit contenir au moins 8 caractères")
++    private String password;
++
++    @NotNull(message = "Le rôle est obligatoire")
++    private Role role;
++}
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AdminUserResponse.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AdminUserResponse.java
+new file mode 100644
+index 0000000..073dfe3
+--- /dev/null
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AdminUserResponse.java
+@@ -0,0 +1,19 @@
++package tn.bank.authservice.application;
++
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import lombok.NoArgsConstructor;
++import tn.bank.authservice.domain.Role;
++
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
++public class AdminUserResponse {
++
++    private Long id;
++    private String email;
++    private String firstName;
++    private String lastName;
++    private Role role;
++    private boolean enabled;
++}
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AdminUserService.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AdminUserService.java
+new file mode 100644
+index 0000000..d9b989d
+--- /dev/null
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AdminUserService.java
+@@ -0,0 +1,163 @@
++package tn.bank.authservice.application;
++
++import lombok.RequiredArgsConstructor;
++import org.springframework.security.crypto.password.PasswordEncoder;
++import org.springframework.stereotype.Service;
++import org.springframework.transaction.annotation.Transactional;
++import tn.bank.authservice.domain.AuditLog;
++import tn.bank.authservice.domain.Role;
++import tn.bank.authservice.domain.User;
++import tn.bank.authservice.infrastructure.AuditLogRepository;
++import tn.bank.authservice.infrastructure.OtpService;
++import tn.bank.authservice.infrastructure.UserEventPublisher;
++import tn.bank.authservice.infrastructure.UserRepository;
++
++import java.security.SecureRandom;
++import java.time.LocalDateTime;
++import java.util.List;
++
++@Service
++@RequiredArgsConstructor
++public class AdminUserService {
++
++    private static final String ALLOWED_CHARS =
++            "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
++    private static final SecureRandom RANDOM = new SecureRandom();
++
++    private final UserRepository userRepository;
++    private final PasswordEncoder passwordEncoder;
++    private final UserEventPublisher userEventPublisher;
++    private final OtpService otpService;
++    private final AuditLogRepository auditLogRepository;
++
++    public List<AdminUserResponse> getAllUsers() {
++        return userRepository.findAllByOrderByLastNameAsc().stream()
++                .map(this::toResponse)
++                .toList();
++    }
++
++    @Transactional
++    public AdminUserResponse createUser(AdminCreateUserRequest request, String performedBy) {
++
++        if (userRepository.existsByEmail(request.getEmail())) {
++            throw new IllegalArgumentException("Un compte existe déjà avec cet email");
++        }
++
++        User user = User.builder()
++                .firstName(request.getFirstName())
++                .lastName(request.getLastName())
++                .email(request.getEmail())
++                .password(passwordEncoder.encode(request.getPassword()))
++                .role(request.getRole())
++                .enabled(true)
++                .build();
++
++        User savedUser = userRepository.save(user);
++
++        // Si c'est un client, on déclenche la création automatique de son compte courant
++        // via le même événement RabbitMQ que l'inscription publique
++        if (savedUser.getRole() == Role.CLIENT) {
++            userEventPublisher.publishUserCreated(
++                    new UserCreatedEvent(
++                            savedUser.getEmail(),
++                            savedUser.getFirstName(),
++                            savedUser.getLastName()
++                    )
++            );
++        }
++
++        logAction("CREATION_UTILISATEUR", savedUser.getEmail(), performedBy,
++                "Rôle attribué : " + savedUser.getRole());
++
++        return toResponse(savedUser);
++    }
++
++    @Transactional
++    public AdminUserResponse updateStatus(Long userId, boolean enabled, String performedBy) {
++
++        User user = userRepository.findById(userId)
++                .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
++
++        user.setEnabled(enabled);
++        User savedUser = userRepository.save(user);
++
++        logAction(enabled ? "REACTIVATION_UTILISATEUR" : "DESACTIVATION_UTILISATEUR",
++                savedUser.getEmail(), performedBy, null);
++
++        return toResponse(savedUser);
++    }
++
++    @Transactional
++    public AdminUserResponse updateRole(Long userId, Role role, String performedBy) {
++
++        User user = userRepository.findById(userId)
++                .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
++
++        Role previousRole = user.getRole();
++        user.setRole(role);
++        User savedUser = userRepository.save(user);
++
++        logAction("MODIFICATION_ROLE", savedUser.getEmail(), performedBy,
++                previousRole + " -> " + role);
++
++        return toResponse(savedUser);
++    }
++
++    @Transactional
++    public void resetPassword(Long userId, String performedBy) {
++
++        User user = userRepository.findById(userId)
++                .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
++
++        String temporaryPassword = generateTemporaryPassword();
++        user.setPassword(passwordEncoder.encode(temporaryPassword));
++        userRepository.save(user);
++
++        otpService.sendPasswordResetEmail(user.getEmail(), temporaryPassword);
++
++        logAction("REINITIALISATION_MOT_DE_PASSE", user.getEmail(), performedBy, null);
++    }
++
++    public List<AuditLogResponse> getAuditLogs() {
++        return auditLogRepository.findAllByOrderByCreatedAtDesc().stream()
++                .map(log -> new AuditLogResponse(
++                        log.getId(),
++                        log.getAction(),
++                        log.getTargetEmail(),
++                        log.getPerformedBy(),
++                        log.getDetails(),
++                        log.getCreatedAt()
++                ))
++                .toList();
++    }
++
++    private void logAction(String action, String targetEmail, String performedBy, String details) {
++        AuditLog log = AuditLog.builder()
++                .action(action)
++                .targetEmail(targetEmail)
++                .performedBy(performedBy)
++                .details(details)
++                .createdAt(LocalDateTime.now())
++                .build();
++        auditLogRepository.save(log);
++    }
++
++    private String generateTemporaryPassword() {
++        StringBuilder sb = new StringBuilder(12);
++        for (int i = 0; i < 12; i++) {
++            sb.append(ALLOWED_CHARS.charAt(RANDOM.nextInt(ALLOWED_CHARS.length())));
++        }
++        return sb.toString();
++    }
++
++    private AdminUserResponse toResponse(User user) {
++        return new AdminUserResponse(
++                user.getId(),
++                user.getEmail(),
++                user.getFirstName(),
++                user.getLastName(),
++                user.getRole(),
++                user.isEnabled()
++        );
++    }
++}
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AuditLogResponse.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AuditLogResponse.java
+new file mode 100644
+index 0000000..8f1cf4d
+--- /dev/null
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AuditLogResponse.java
+@@ -0,0 +1,20 @@
++package tn.bank.authservice.application;
++
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import lombok.NoArgsConstructor;
++
++import java.time.LocalDateTime;
++
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
++public class AuditLogResponse {
++
++    private Long id;
++    private String action;
++    private String targetEmail;
++    private String performedBy;
++    private String details;
++    private LocalDateTime createdAt;
++}
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AuthService.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AuthService.java
+index 702d7d2..94a3017 100644
+--- a/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AuthService.java
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/AuthService.java
+@@ -76,7 +76,8 @@ public class AuthService {
+                 null,
+                 user.getEmail(),
+                 "Un code de vérification a été envoyé par email",
+-                true
++                true,
++                user.getRole()
+         );
+     }
+ 
+@@ -101,13 +102,14 @@ public class AuthService {
+         user.setOtpExpiration(null);
+         userRepository.save(user);
+ 
+-        String token = jwtService.generateToken(user.getEmail());
++        String token = jwtService.generateToken(user.getEmail(), user.getRole());
+ 
+         return new LoginResponse(
+                 token,
+                 user.getEmail(),
+                 "Connexion réussie",
+-                false
++                false,
++                user.getRole()
+         );
+     }
+ }
+\ No newline at end of file
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/LoginResponse.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/LoginResponse.java
+index 2a027b7..7cfc793 100644
+--- a/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/LoginResponse.java
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/LoginResponse.java
+@@ -3,6 +3,7 @@ package tn.bank.authservice.application;
+ import lombok.AllArgsConstructor;
+ import lombok.Data;
+ import lombok.NoArgsConstructor;
++import tn.bank.authservice.domain.Role;
+ 
+ @Data
+ @NoArgsConstructor
+@@ -13,4 +14,5 @@ public class LoginResponse {
+     private String email;
+     private String message;
+     private boolean requiresOtp;
++    private Role role;
+ }
+\ No newline at end of file
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/UpdateUserRoleRequest.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/UpdateUserRoleRequest.java
+new file mode 100644
+index 0000000..63e7914
+--- /dev/null
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/UpdateUserRoleRequest.java
+@@ -0,0 +1,16 @@
++package tn.bank.authservice.application;
++
++import jakarta.validation.constraints.NotNull;
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import lombok.NoArgsConstructor;
++import tn.bank.authservice.domain.Role;
++
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
++public class UpdateUserRoleRequest {
++
++    @NotNull(message = "Le rôle est obligatoire")
++    private Role role;
++}
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/UpdateUserStatusRequest.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/UpdateUserStatusRequest.java
+new file mode 100644
+index 0000000..ef40347
+--- /dev/null
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/application/UpdateUserStatusRequest.java
+@@ -0,0 +1,13 @@
++package tn.bank.authservice.application;
++
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import lombok.NoArgsConstructor;
++
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
++public class UpdateUserStatusRequest {
++
++    private boolean enabled;
++}
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/domain/AuditLog.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/domain/AuditLog.java
+new file mode 100644
+index 0000000..85b1048
+--- /dev/null
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/domain/AuditLog.java
+@@ -0,0 +1,37 @@
++package tn.bank.authservice.domain;
++
++import jakarta.persistence.*;
++import lombok.AllArgsConstructor;
++import lombok.Builder;
++import lombok.Data;
++import lombok.NoArgsConstructor;
++
++import java.time.LocalDateTime;
++
++@Entity
++@Table(name = "audit_logs")
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
++@Builder
++public class AuditLog {
++
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
++    private Long id;
++
++    @Column(nullable = false)
++    private String action;
++
++    @Column(name = "target_email")
++    private String targetEmail;
++
++    @Column(name = "performed_by", nullable = false)
++    private String performedBy;
++
++    @Column(columnDefinition = "TEXT")
++    private String details;
++
++    @Column(name = "created_at", nullable = false)
++    private LocalDateTime createdAt;
++}
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/AdminBootstrapRunner.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/AdminBootstrapRunner.java
+new file mode 100644
+index 0000000..860c7dd
+--- /dev/null
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/AdminBootstrapRunner.java
+@@ -0,0 +1,56 @@
++package tn.bank.authservice.infrastructure;
++
++import lombok.RequiredArgsConstructor;
++import lombok.extern.slf4j.Slf4j;
++import org.springframework.beans.factory.annotation.Value;
++import org.springframework.boot.CommandLineRunner;
++import org.springframework.security.crypto.password.PasswordEncoder;
++import org.springframework.stereotype.Component;
++import tn.bank.authservice.domain.Role;
++import tn.bank.authservice.domain.User;
++
++@Slf4j
++@Component
++@RequiredArgsConstructor
++public class AdminBootstrapRunner implements CommandLineRunner {
++
++    private final UserRepository userRepository;
++    private final PasswordEncoder passwordEncoder;
++
++    @Value("${admin.bootstrap.email}")
++    private String bootstrapEmail;
++
++    @Value("${admin.bootstrap.password}")
++    private String bootstrapPassword;
++
++    @Value("${admin.bootstrap.first-name}")
++    private String bootstrapFirstName;
++
++    @Value("${admin.bootstrap.last-name}")
++    private String bootstrapLastName;
++
++    @Override
++    public void run(String... args) {
++        boolean adminExists = userRepository.existsByRole(Role.ADMIN);
++
++        if (adminExists) {
++            return;
++        }
++
++        User admin = User.builder()
++                .email(bootstrapEmail)
++                .password(passwordEncoder.encode(bootstrapPassword))
++                .firstName(bootstrapFirstName)
++                .lastName(bootstrapLastName)
++                .role(Role.ADMIN)
++                .enabled(true)
++                .build();
++
++        userRepository.save(admin);
++
++        log.warn("=== Compte administrateur créé automatiquement ===");
++        log.warn("Email : {}", bootstrapEmail);
++        log.warn("Mot de passe : {} (à changer immédiatement en production)", bootstrapPassword);
++        log.warn("====================================================");
++    }
++}
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/AuditLogRepository.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/AuditLogRepository.java
+new file mode 100644
+index 0000000..4dbddca
+--- /dev/null
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/AuditLogRepository.java
+@@ -0,0 +1,11 @@
++package tn.bank.authservice.infrastructure;
++
++import org.springframework.data.jpa.repository.JpaRepository;
++import tn.bank.authservice.domain.AuditLog;
++
++import java.util.List;
++
++public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
++
++    List<AuditLog> findAllByOrderByCreatedAtDesc();
++}
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/JwtAuthFilter.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/JwtAuthFilter.java
+index 94950ce..f74a0c6 100644
+--- a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/JwtAuthFilter.java
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/JwtAuthFilter.java
+@@ -7,12 +7,14 @@ import jakarta.servlet.http.HttpServletResponse;
+ import lombok.RequiredArgsConstructor;
+ import org.springframework.lang.NonNull;
+ import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
++import org.springframework.security.core.GrantedAuthority;
++import org.springframework.security.core.authority.SimpleGrantedAuthority;
+ import org.springframework.security.core.context.SecurityContextHolder;
+ import org.springframework.stereotype.Component;
+ import org.springframework.web.filter.OncePerRequestFilter;
+ 
+ import java.io.IOException;
+-import java.util.Collections;
++import java.util.List;
+ 
+ @Component
+ @RequiredArgsConstructor
+@@ -42,10 +44,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
+             if (email != null && jwtService.isTokenValid(token, email)
+                     && SecurityContextHolder.getContext().getAuthentication() == null) {
+ 
++                String role = jwtService.extractRole(token);
++                List<GrantedAuthority> authorities = role != null
++                        ? List.of(new SimpleGrantedAuthority("ROLE_" + role))
++                        : List.of();
++
+                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                         email,
+                         null,
+-                        Collections.emptyList()
++                        authorities
+                 );
+ 
+                 SecurityContextHolder.getContext().setAuthentication(authToken);
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/JwtService.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/JwtService.java
+index e3a16d9..51b4f02 100644
+--- a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/JwtService.java
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/JwtService.java
+@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
+ import io.jsonwebtoken.security.Keys;
+ import org.springframework.beans.factory.annotation.Value;
+ import org.springframework.stereotype.Service;
++import tn.bank.authservice.domain.Role;
+ 
+ import javax.crypto.SecretKey;
+ import java.util.Date;
+@@ -23,12 +24,13 @@ public class JwtService {
+         return Keys.hmacShaKeyFor(secret.getBytes());
+     }
+ 
+-    public String generateToken(String email) {
++    public String generateToken(String email, Role role) {
+         Date now = new Date();
+         Date expiryDate = new Date(now.getTime() + expiration);
+ 
+         return Jwts.builder()
+                 .subject(email)
++                .claim("role", role.name())
+                 .issuedAt(now)
+                 .expiration(expiryDate)
+                 .signWith(getSigningKey())
+@@ -39,6 +41,10 @@ public class JwtService {
+         return extractClaim(token, Claims::getSubject);
+     }
+ 
++    public String extractRole(String token) {
++        return extractClaim(token, claims -> claims.get("role", String.class));
++    }
++
+     public boolean isTokenValid(String token, String email) {
+         String extractedEmail = extractEmail(token);
+         return extractedEmail.equals(email) && !isTokenExpired(token);
+@@ -57,3 +63,4 @@ public class JwtService {
+         return claimsResolver.apply(claims);
+     }
+ }
++
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/OtpService.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/OtpService.java
+index 38608be..3ba3db5 100644
+--- a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/OtpService.java
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/OtpService.java
+@@ -40,4 +40,19 @@ public class OtpService {
+         );
+         mailSender.send(message);
+     }
++
++    public void sendPasswordResetEmail(String toEmail, String temporaryPassword) {
++        SimpleMailMessage message = new SimpleMailMessage();
++        message.setTo(toEmail);
++        message.setSubject("Réinitialisation de votre mot de passe - Bank Platform");
++        message.setText(
++                "Bonjour,\n\n" +
++                "Un administrateur a réinitialisé votre mot de passe.\n\n" +
++                "Votre nouveau mot de passe temporaire est : " + temporaryPassword + "\n\n" +
++                "Merci de vous connecter puis de le modifier dès que possible.\n" +
++                "Si vous n'êtes pas à l'origine de cette demande, contactez votre banque immédiatement.\n\n" +
++                "L'équipe Bank Platform"
++        );
++        mailSender.send(message);
++    }
+ }
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/SecurityConfig.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/SecurityConfig.java
+index 88aa02f..3c6e02f 100644
+--- a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/SecurityConfig.java
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/SecurityConfig.java
+@@ -47,6 +47,7 @@ public class SecurityConfig {
+                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                 .authorizeHttpRequests(auth -> auth
+                         .requestMatchers("/api/auth/**").permitAll()
++                        .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+                         .anyRequest().authenticated()
+                 )
+                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/UserRepository.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/UserRepository.java
+index a195f38..351598e 100644
+--- a/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/UserRepository.java
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/infrastructure/UserRepository.java
+@@ -1,8 +1,10 @@
+ package tn.bank.authservice.infrastructure;
+ 
+ import org.springframework.data.jpa.repository.JpaRepository;
++import tn.bank.authservice.domain.Role;
+ import tn.bank.authservice.domain.User;
+ 
++import java.util.List;
+ import java.util.Optional;
+ 
+ public interface UserRepository extends JpaRepository<User, Long> {
+@@ -10,4 +12,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
+     Optional<User> findByEmail(String email);
+ 
+     boolean existsByEmail(String email);
++
++    boolean existsByRole(Role role);
++
++    List<User> findAllByOrderByLastNameAsc();
+ }
+diff --git a/bank-backend/auth-service/src/main/java/tn/bank/authservice/presentation/AdminUserController.java b/bank-backend/auth-service/src/main/java/tn/bank/authservice/presentation/AdminUserController.java
+new file mode 100644
+index 0000000..ea3fa0c
+--- /dev/null
++++ b/bank-backend/auth-service/src/main/java/tn/bank/authservice/presentation/AdminUserController.java
+@@ -0,0 +1,67 @@
++package tn.bank.authservice.presentation;
++
++import jakarta.validation.Valid;
++import lombok.RequiredArgsConstructor;
++import org.springframework.http.HttpStatus;
++import org.springframework.http.ResponseEntity;
++import org.springframework.security.core.Authentication;
++import org.springframework.web.bind.annotation.*;
++import tn.bank.authservice.application.*;
++
++import java.util.List;
++
++@RestController
++@RequestMapping("/api/admin")
++@RequiredArgsConstructor
++public class AdminUserController {
++
++    private final AdminUserService adminUserService;
++
++    @GetMapping("/users")
++    public ResponseEntity<List<AdminUserResponse>> getAllUsers() {
++        return ResponseEntity.ok(adminUserService.getAllUsers());
++    }
++
++    @PostMapping("/users")
++    public ResponseEntity<AdminUserResponse> createUser(
++            @Valid @RequestBody AdminCreateUserRequest request,
++            Authentication authentication
++    ) {
++        AdminUserResponse response = adminUserService.createUser(request, authentication.getName());
++        return ResponseEntity.status(HttpStatus.CREATED).body(response);
++    }
++
++    @PatchMapping("/users/{userId}/status")
++    public ResponseEntity<AdminUserResponse> updateStatus(
++            @PathVariable Long userId,
++            @RequestBody UpdateUserStatusRequest request,
++            Authentication authentication
++    ) {
++        AdminUserResponse response = adminUserService.updateStatus(userId, request.isEnabled(), authentication.getName());
++        return ResponseEntity.ok(response);
++    }
++
++    @PatchMapping("/users/{userId}/role")
++    public ResponseEntity<AdminUserResponse> updateRole(
++            @PathVariable Long userId,
++            @Valid @RequestBody UpdateUserRoleRequest request,
++            Authentication authentication
++    ) {
++        AdminUserResponse response = adminUserService.updateRole(userId, request.getRole(), authentication.getName());
++        return ResponseEntity.ok(response);
++    }
++
++    @PostMapping("/users/{userId}/reset-password")
++    public ResponseEntity<Void> resetPassword(
++            @PathVariable Long userId,
++            Authentication authentication
++    ) {
++        adminUserService.resetPassword(userId, authentication.getName());
++        return ResponseEntity.noContent().build();
++    }
++
++    @GetMapping("/audit-logs")
++    public ResponseEntity<List<AuditLogResponse>> getAuditLogs() {
++        return ResponseEntity.ok(adminUserService.getAuditLogs());
++    }
++}
+diff --git a/bank-backend/auth-service/src/main/resources/application.properties b/bank-backend/auth-service/src/main/resources/application.properties
+index 5e2d348..74a5c40 100644
+--- a/bank-backend/auth-service/src/main/resources/application.properties
++++ b/bank-backend/auth-service/src/main/resources/application.properties
+@@ -22,10 +22,19 @@ spring.mail.username=82a73b7691dd2c
+ spring.mail.password=3a1d10a1123119
+ spring.mail.properties.mail.smtp.auth=true
+ spring.mail.properties.mail.smtp.starttls.enable=true
++spring.mail.properties.mail.smtp.connectiontimeout=5000
++spring.mail.properties.mail.smtp.timeout=5000
++spring.mail.properties.mail.smtp.writetimeout=5000
+ 
+ # Duree de validite du code OTP en minutes
+ otp.expiration-minutes=5
+ 
++# Compte administrateur créé automatiquement au premier démarrage (si aucun ADMIN n'existe)
++admin.bootstrap.email=admin@bankplatform.tn
++admin.bootstrap.password=Admin@2026!
++admin.bootstrap.first-name=Super
++admin.bootstrap.last-name=Admin
++
+ # Configuration RabbitMQ
+ spring.rabbitmq.host=localhost
+ spring.rabbitmq.port=5672
+diff --git a/bank-frontend/src/app/app.routes.ts b/bank-frontend/src/app/app.routes.ts
+index f98041b..2ac0daa 100644
+--- a/bank-frontend/src/app/app.routes.ts
++++ b/bank-frontend/src/app/app.routes.ts
+@@ -4,11 +4,19 @@ import { RegisterComponent } from './features/auth/register/register.component';
+ import {VerifyOtpComponent} from './features/auth/verify-otp/verify-otp.component';
+ import {LayoutComponent} from './shared/layout/layout.component';
+ import {authGuard} from './core/guards/auth.guard';
++import {adminGuard} from './core/guards/admin.guard';
+ import {DashboardComponent} from './features/dashboard/dashboard.component';
+ import {TransferComponent} from './features/transfers/transfer.component';
++import {BulkTransferComponent} from './features/bulk-transfers/bulk-transfer.component';
+ import {RecurringTransferComponent} from './features/recurring-transfers/recurring-transfer.component';
+ import {AccountsComponent} from './features/accounts/accounts.component';
+ import {HomeComponent} from './features/public/home/home.component';
++import {AdminLayoutComponent} from './shared/admin-layout/admin-layout.component';
++import {AdminDashboardComponent} from './features/admin/admin-dashboard/admin-dashboard.component';
++import {AdminUsersComponent} from './features/admin/admin-users/admin-users.component';
++import {AdminAccountsComponent} from './features/admin/admin-accounts/admin-accounts.component';
++import {AdminTransactionsComponent} from './features/admin/admin-transactions/admin-transactions.component';
++import {AdminAuditLogsComponent} from './features/admin/admin-audit-logs/admin-audit-logs.component';
+ 
+ export const routes: Routes = [
+   { path: '', component: HomeComponent },
+@@ -23,6 +31,19 @@ export const routes: Routes = [
+       { path: 'recurring-transfers', component: RecurringTransferComponent },
+       { path: 'dashboard', component: DashboardComponent },
+       { path: 'accounts', component: AccountsComponent },
+-      { path: 'transfers', component: TransferComponent }    ]}
++      { path: 'transfers', component: TransferComponent },
++      { path: 'transfers/bulk', component: BulkTransferComponent }    ]},
++  {
++    path: 'admin',
++    component: AdminLayoutComponent,
++    canActivate: [adminGuard],
++    children: [
++      { path: 'dashboard', component: AdminDashboardComponent },
++      { path: 'users', component: AdminUsersComponent },
++      { path: 'accounts', component: AdminAccountsComponent },
++      { path: 'transactions', component: AdminTransactionsComponent },
++      { path: 'audit-logs', component: AdminAuditLogsComponent }
++    ]
++  }
+ 
+ ];
+diff --git a/bank-frontend/src/app/core/guards/admin.guard.ts b/bank-frontend/src/app/core/guards/admin.guard.ts
+new file mode 100644
+index 0000000..789b3b3
+--- /dev/null
++++ b/bank-frontend/src/app/core/guards/admin.guard.ts
+@@ -0,0 +1,15 @@
++import { inject } from '@angular/core';
++import { CanActivateFn, Router } from '@angular/router';
++import { AuthService } from '../services/auth.service';
++
++export const adminGuard: CanActivateFn = () => {
++  const authService = inject(AuthService);
++  const router = inject(Router);
++
++  if (authService.isLoggedIn() && authService.isAdmin()) {
++    return true;
++  }
++
++  router.navigate(authService.isLoggedIn() ? ['/dashboard'] : ['/login']);
++  return false;
++};
+diff --git a/bank-frontend/src/app/core/models/admin-account.model.ts b/bank-frontend/src/app/core/models/admin-account.model.ts
+new file mode 100644
+index 0000000..daa2025
+--- /dev/null
++++ b/bank-frontend/src/app/core/models/admin-account.model.ts
+@@ -0,0 +1,56 @@
++export type AdminAccountType = 'COURANT' | 'EPARGNE';
++export type AdminTransactionType = 'DEPOT' | 'RETRAIT' | 'VIREMENT_ENTRANT' | 'VIREMENT_SORTANT';
++
++export interface AdminClient {
++  id: number;
++  email: string;
++  firstName: string;
++  lastName: string;
++  accountCount: number;
++  totalBalance: number;
++}
++
++export interface AdminAccount {
++  id: number;
++  accountNumber: string;
++  type: AdminAccountType;
++  balance: number;
++  createdAt: string;
++  clientId: number;
++  clientEmail: string;
++  clientFullName: string;
++}
++
++export interface AdminCreateAccountRequest {
++  clientId: number;
++  type: AdminAccountType;
++  initialBalance?: number;
++}
++
++export interface AdminTransaction {
++  id: number;
++  type: AdminTransactionType;
++  amount: number;
++  balanceAfter: number;
++  date: string;
++  accountNumber: string;
++  clientEmail: string;
++  clientFullName: string;
++}
++
++export interface AdminTransactionFilters {
++  startDate?: string;
++  endDate?: string;
++  type?: AdminTransactionType;
++  accountNumber?: string;
++}
++
++export interface AdminDashboardStats {
++  totalClients: number;
++  totalAccounts: number;
++  totalCourantAccounts: number;
++  totalEpargneAccounts: number;
++  totalBalance: number;
++  transactionsToday: number;
++  transactionsTotal: number;
++}
+diff --git a/bank-frontend/src/app/core/models/admin-user.model.ts b/bank-frontend/src/app/core/models/admin-user.model.ts
+new file mode 100644
+index 0000000..b7fa3aa
+--- /dev/null
++++ b/bank-frontend/src/app/core/models/admin-user.model.ts
+@@ -0,0 +1,35 @@
++import { UserRole } from './auth.model';
++
++export interface AdminUser {
++  id: number;
++  email: string;
++  firstName: string;
++  lastName: string;
++  role: UserRole;
++  enabled: boolean;
++}
++
++export interface AdminCreateUserRequest {
++  firstName: string;
++  lastName: string;
++  email: string;
++  password: string;
++  role: UserRole;
++}
++
++export interface UpdateUserRoleRequest {
++  role: UserRole;
++}
++
++export interface UpdateUserStatusRequest {
++  enabled: boolean;
++}
++
++export interface AuditLogEntry {
++  id: number;
++  action: string;
++  targetEmail: string | null;
++  performedBy: string;
++  details: string | null;
++  createdAt: string;
++}
+diff --git a/bank-frontend/src/app/core/models/auth.model.ts b/bank-frontend/src/app/core/models/auth.model.ts
+index 8190ece..49374a1 100644
+--- a/bank-frontend/src/app/core/models/auth.model.ts
++++ b/bank-frontend/src/app/core/models/auth.model.ts
+@@ -3,11 +3,14 @@ export interface LoginRequest {
+   password: string;
+ }
+ 
++export type UserRole = 'CLIENT' | 'ADMIN';
++
+ export interface LoginResponse {
+   token: string | null;
+   email: string;
+   message: string;
+   requiresOtp: boolean;
++  role: UserRole;
+ }
+ 
+ export interface VerifyOtpRequest {
+diff --git a/bank-frontend/src/app/core/models/bulk-transfer.model.ts b/bank-frontend/src/app/core/models/bulk-transfer.model.ts
+new file mode 100644
+index 0000000..ecd0c25
+--- /dev/null
++++ b/bank-frontend/src/app/core/models/bulk-transfer.model.ts
+@@ -0,0 +1,29 @@
++import { TransferStatus } from './transfer.model';
++
++export interface InitiateBulkTransferResponse {
++  bulkTransferId: number;
++  totalItems: number;
++  message: string;
++}
++
++export interface ConfirmBulkTransferRequest {
++  bulkTransferId: number;
++  otpCode: string;
++}
++
++export type BulkTransferItemStatus = 'PENDING' | 'SUCCESS' | 'FAILED';
++
++export interface BulkTransferItemResult {
++  destinationAccountNumber: string;
++  amount: number;
++  status: BulkTransferItemStatus;
++  errorMessage?: string;
++}
++
++export interface ConfirmBulkTransferResponse {
++  bulkTransferId: number;
++  status: TransferStatus;
++  successCount: number;
++  failedCount: number;
++  results: BulkTransferItemResult[];
++}
+diff --git a/bank-frontend/src/app/core/services/admin-account.service.ts b/bank-frontend/src/app/core/services/admin-account.service.ts
+new file mode 100644
+index 0000000..0a9f735
+--- /dev/null
++++ b/bank-frontend/src/app/core/services/admin-account.service.ts
+@@ -0,0 +1,45 @@
++import { Injectable } from '@angular/core';
++import { HttpClient, HttpParams } from '@angular/common/http';
++import { Observable } from 'rxjs';
++import {
++  AdminAccount,
++  AdminClient,
++  AdminCreateAccountRequest,
++  AdminDashboardStats,
++  AdminTransaction,
++  AdminTransactionFilters
++} from '../models/admin-account.model';
++
++@Injectable({ providedIn: 'root' })
++export class AdminAccountService {
++
++  private readonly baseUrl = 'http://localhost:8082/api/admin';
++
++  constructor(private http: HttpClient) {}
++
++  getAllClients(): Observable<AdminClient[]> {
++    return this.http.get<AdminClient[]>(`${this.baseUrl}/clients`);
++  }
++
++  getAllAccounts(): Observable<AdminAccount[]> {
++    return this.http.get<AdminAccount[]>(`${this.baseUrl}/accounts`);
++  }
++
++  createAccount(request: AdminCreateAccountRequest): Observable<AdminAccount> {
++    return this.http.post<AdminAccount>(`${this.baseUrl}/accounts`, request);
++  }
++
++  getTransactions(filters: AdminTransactionFilters): Observable<AdminTransaction[]> {
++    let params = new HttpParams();
++    if (filters.startDate) params = params.set('startDate', filters.startDate);
++    if (filters.endDate) params = params.set('endDate', filters.endDate);
++    if (filters.type) params = params.set('type', filters.type);
++    if (filters.accountNumber) params = params.set('accountNumber', filters.accountNumber);
++
++    return this.http.get<AdminTransaction[]>(`${this.baseUrl}/transactions`, { params });
++  }
++
++  getDashboardStats(): Observable<AdminDashboardStats> {
++    return this.http.get<AdminDashboardStats>(`${this.baseUrl}/dashboard/stats`);
++  }
++}
+diff --git a/bank-frontend/src/app/core/services/admin-user.service.ts b/bank-frontend/src/app/core/services/admin-user.service.ts
+new file mode 100644
+index 0000000..b0ce6ee
+--- /dev/null
++++ b/bank-frontend/src/app/core/services/admin-user.service.ts
+@@ -0,0 +1,42 @@
++import { Injectable } from '@angular/core';
++import { HttpClient } from '@angular/common/http';
++import { Observable } from 'rxjs';
++import {
++  AdminUser,
++  AdminCreateUserRequest,
++  UpdateUserRoleRequest,
++  UpdateUserStatusRequest,
++  AuditLogEntry
++} from '../models/admin-user.model';
++
++@Injectable({ providedIn: 'root' })
++export class AdminUserService {
++
++  private readonly baseUrl = 'http://localhost:8081/api/admin';
++
++  constructor(private http: HttpClient) {}
++
++  getAllUsers(): Observable<AdminUser[]> {
++    return this.http.get<AdminUser[]>(`${this.baseUrl}/users`);
++  }
++
++  createUser(request: AdminCreateUserRequest): Observable<AdminUser> {
++    return this.http.post<AdminUser>(`${this.baseUrl}/users`, request);
++  }
++
++  updateStatus(userId: number, request: UpdateUserStatusRequest): Observable<AdminUser> {
++    return this.http.patch<AdminUser>(`${this.baseUrl}/users/${userId}/status`, request);
++  }
++
++  updateRole(userId: number, request: UpdateUserRoleRequest): Observable<AdminUser> {
++    return this.http.patch<AdminUser>(`${this.baseUrl}/users/${userId}/role`, request);
++  }
++
++  resetPassword(userId: number): Observable<void> {
++    return this.http.post<void>(`${this.baseUrl}/users/${userId}/reset-password`, {});
++  }
++
++  getAuditLogs(): Observable<AuditLogEntry[]> {
++    return this.http.get<AuditLogEntry[]>(`${this.baseUrl}/audit-logs`);
++  }
++}
+diff --git a/bank-frontend/src/app/core/services/auth.service.ts b/bank-frontend/src/app/core/services/auth.service.ts
+index 8add562..194ed82 100644
+--- a/bank-frontend/src/app/core/services/auth.service.ts
++++ b/bank-frontend/src/app/core/services/auth.service.ts
+@@ -6,7 +6,8 @@ import {
+   LoginResponse,
+   VerifyOtpRequest,
+   RegisterRequest,
+-  RegisterResponse
++  RegisterResponse,
++  UserRole
+ } from '../models/auth.model';
+ 
+ @Injectable({ providedIn: 'root' })
+@@ -14,6 +15,7 @@ export class AuthService {
+ 
+   private readonly baseUrl = 'http://localhost:8081/api/auth';
+   private readonly tokenKey = 'bank_platform_token';
++  private readonly roleKey = 'bank_platform_role';
+ 
+   constructor(private http: HttpClient) {}
+ 
+@@ -30,6 +32,7 @@ export class AuthService {
+       tap(response => {
+         if (response.token) {
+           this.setToken(response.token);
++          this.setRole(response.role);
+         }
+       })
+     );
+@@ -43,11 +46,24 @@ export class AuthService {
+     return localStorage.getItem(this.tokenKey);
+   }
+ 
++  setRole(role: UserRole): void {
++    localStorage.setItem(this.roleKey, role);
++  }
++
++  getRole(): UserRole | null {
++    return localStorage.getItem(this.roleKey) as UserRole | null;
++  }
++
++  isAdmin(): boolean {
++    return this.getRole() === 'ADMIN';
++  }
++
+   isLoggedIn(): boolean {
+     return this.getToken() !== null;
+   }
+ 
+   logout(): void {
+     localStorage.removeItem(this.tokenKey);
++    localStorage.removeItem(this.roleKey);
+   }
+ }
+diff --git a/bank-frontend/src/app/core/services/bulk-transfer.service.ts b/bank-frontend/src/app/core/services/bulk-transfer.service.ts
+new file mode 100644
+index 0000000..3a1dc13
+--- /dev/null
++++ b/bank-frontend/src/app/core/services/bulk-transfer.service.ts
+@@ -0,0 +1,27 @@
++import { Injectable } from '@angular/core';
++import { HttpClient } from '@angular/common/http';
++import { Observable } from 'rxjs';
++import {
++  ConfirmBulkTransferRequest,
++  ConfirmBulkTransferResponse,
++  InitiateBulkTransferResponse
++} from '../models/bulk-transfer.model';
++
++@Injectable({ providedIn: 'root' })
++export class BulkTransferService {
++
++  private readonly baseUrl = 'http://localhost:8082/api/transfers/bulk';
++
++  constructor(private http: HttpClient) {}
++
++  initiateBulkTransfer(sourceAccountId: number, file: File): Observable<InitiateBulkTransferResponse> {
++    const formData = new FormData();
++    formData.append('sourceAccountId', String(sourceAccountId));
++    formData.append('file', file);
++    return this.http.post<InitiateBulkTransferResponse>(`${this.baseUrl}/initiate`, formData);
++  }
++
++  confirmBulkTransfer(request: ConfirmBulkTransferRequest): Observable<ConfirmBulkTransferResponse> {
++    return this.http.post<ConfirmBulkTransferResponse>(`${this.baseUrl}/confirm`, request);
++  }
++}
+diff --git a/bank-frontend/src/app/features/admin/admin-accounts/admin-accounts.component.css b/bank-frontend/src/app/features/admin/admin-accounts/admin-accounts.component.css
+new file mode 100644
+index 0000000..5c34016
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-accounts/admin-accounts.component.css
+@@ -0,0 +1 @@
++@import '../../../shared/styles/admin-common.css';
+diff --git a/bank-frontend/src/app/features/admin/admin-accounts/admin-accounts.component.html b/bank-frontend/src/app/features/admin/admin-accounts/admin-accounts.component.html
+new file mode 100644
+index 0000000..deb5d80
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-accounts/admin-accounts.component.html
+@@ -0,0 +1,103 @@
++<div class="admin-page">
++
++  <div class="admin-page-header">
++    <div>
++      <h1>Gestion des comptes</h1>
++      <p>Créez des comptes courants ou épargne pour vos clients et consultez leurs soldes.</p>
++    </div>
++    <button class="admin-btn-primary" (click)="toggleCreateForm()">
++      <i class="ti" [class.ti-plus]="!showCreateForm" [class.ti-x]="showCreateForm"></i>
++      {{ showCreateForm ? 'Annuler' : 'Nouveau compte' }}
++    </button>
++  </div>
++
++  @if (successMessage) {
++    <div class="admin-alert-success">{{ successMessage }}</div>
++  }
++  @if (errorMessage) {
++    <div class="admin-alert-error">{{ errorMessage }}</div>
++  }
++
++  @if (showCreateForm) {
++    <div class="admin-card">
++      <h2>Nouveau compte</h2>
++      <form [formGroup]="createForm" (ngSubmit)="submitCreate()" class="admin-form">
++
++        <div class="admin-form-row">
++          <div>
++            <label>Client</label>
++            <select formControlName="clientId">
++              @for (client of clients; track client.id) {
++                <option [value]="client.id">{{ client.firstName }} {{ client.lastName }} — {{ client.email }}</option>
++              }
++            </select>
++          </div>
++          <div>
++            <label>Type de compte</label>
++            <select formControlName="type">
++              <option value="COURANT">Compte courant</option>
++              <option value="EPARGNE">Compte épargne</option>
++            </select>
++          </div>
++        </div>
++
++        <div class="admin-form-row">
++          <div>
++            <label>Solde initial (DT)</label>
++            <input type="number" step="0.001" min="0" formControlName="initialBalance" />
++          </div>
++        </div>
++
++        @if (createError) {
++          <div class="admin-alert-error">{{ createError }}</div>
++        }
++
++        <button type="submit" class="admin-btn-primary" [disabled]="createLoading">
++          @if (createLoading) { Création en cours... } @else { Créer le compte }
++        </button>
++      </form>
++    </div>
++  }
++
++  <div class="admin-card">
++    <h2>Comptes ({{ accounts.length }})</h2>
++
++    @if (loading) {
++      <div class="admin-empty-state">Chargement...</div>
++    } @else if (accounts.length === 0) {
++      <div class="admin-empty-state">Aucun compte pour le moment.</div>
++    } @else {
++      <div class="admin-table-wrapper">
++        <table class="admin-table">
++          <thead>
++            <tr>
++              <th>N° de compte</th>
++              <th>Titulaire</th>
++              <th>Type</th>
++              <th>Solde</th>
++              <th>Créé le</th>
++            </tr>
++          </thead>
++          <tbody>
++            @for (account of accounts; track account.id) {
++              <tr>
++                <td class="admin-mono">{{ account.accountNumber }}</td>
++                <td>
++                  {{ account.clientFullName }}
++                  <div class="admin-mono" style="color:#94a3b8; font-size: 11px;">{{ account.clientEmail }}</div>
++                </td>
++                <td>
++                  <span class="admin-badge" [class.type-courant]="account.type === 'COURANT'" [class.type-epargne]="account.type === 'EPARGNE'">
++                    {{ account.type === 'COURANT' ? 'Courant' : 'Épargne' }}
++                  </span>
++                </td>
++                <td>{{ account.balance | number:'1.3-3' }} DT</td>
++                <td>{{ account.createdAt | date:'dd/MM/yyyy' }}</td>
++              </tr>
++            }
++          </tbody>
++        </table>
++      </div>
++    }
++  </div>
++</div>
+diff --git a/bank-frontend/src/app/features/admin/admin-accounts/admin-accounts.component.ts b/bank-frontend/src/app/features/admin/admin-accounts/admin-accounts.component.ts
+new file mode 100644
+index 0000000..ab4e124
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-accounts/admin-accounts.component.ts
+@@ -0,0 +1,102 @@
++import { Component, OnInit } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
++import { AdminAccountService } from '../../../core/services/admin-account.service';
++import { AdminAccount, AdminClient } from '../../../core/models/admin-account.model';
++
++@Component({
++  selector: 'app-admin-accounts',
++  standalone: true,
++  imports: [CommonModule, ReactiveFormsModule],
++  templateUrl: './admin-accounts.component.html',
++  styleUrl: './admin-accounts.component.css'
++})
++export class AdminAccountsComponent implements OnInit {
++
++  accounts: AdminAccount[] = [];
++  clients: AdminClient[] = [];
++  loading = true;
++  errorMessage: string | null = null;
++  successMessage: string | null = null;
++
++  showCreateForm = false;
++  createForm: FormGroup;
++  createLoading = false;
++  createError: string | null = null;
++
++  constructor(
++    private fb: FormBuilder,
++    private adminAccountService: AdminAccountService
++  ) {
++    this.createForm = this.fb.group({
++      clientId: ['', Validators.required],
++      type: ['COURANT', Validators.required],
++      initialBalance: [0, [Validators.required, Validators.min(0)]]
++    });
++  }
++
++  ngOnInit(): void {
++    this.loadData();
++  }
++
++  loadData(): void {
++    this.loading = true;
++    this.errorMessage = null;
++
++    this.adminAccountService.getAllAccounts().subscribe({
++      next: (accounts) => {
++        this.accounts = accounts;
++        this.loading = false;
++      },
++      error: (err) => {
++        this.loading = false;
++        this.errorMessage = err.error?.message || 'Impossible de charger les comptes.';
++      }
++    });
++
++    this.adminAccountService.getAllClients().subscribe({
++      next: (clients) => {
++        this.clients = clients;
++        if (clients.length > 0 && !this.createForm.value.clientId) {
++          this.createForm.patchValue({ clientId: clients[0].id });
++        }
++      }
++    });
++  }
++
++  toggleCreateForm(): void {
++    this.showCreateForm = !this.showCreateForm;
++    this.createError = null;
++  }
++
++  submitCreate(): void {
++    if (this.createForm.invalid) {
++      this.createForm.markAllAsTouched();
++      return;
++    }
++
++    this.createLoading = true;
++    this.createError = null;
++
++    const value = this.createForm.value;
++
++    this.adminAccountService.createAccount({
++      clientId: Number(value.clientId),
++      type: value.type,
++      initialBalance: Number(value.initialBalance)
++    }).subscribe({
++      next: () => {
++        this.createLoading = false;
++        this.showCreateForm = false;
++        this.createForm.patchValue({ type: 'COURANT', initialBalance: 0 });
++        this.successMessage = 'Compte créé avec succès.';
++        this.loadData();
++        setTimeout(() => this.successMessage = null, 4000);
++      },
++      error: (err) => {
++        this.createLoading = false;
++        this.createError = err.error?.message || 'Une erreur est survenue lors de la création du compte.';
++      }
++    });
++  }
++}
+diff --git a/bank-frontend/src/app/features/admin/admin-audit-logs/admin-audit-logs.component.css b/bank-frontend/src/app/features/admin/admin-audit-logs/admin-audit-logs.component.css
+new file mode 100644
+index 0000000..5c34016
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-audit-logs/admin-audit-logs.component.css
+@@ -0,0 +1 @@
++@import '../../../shared/styles/admin-common.css';
+diff --git a/bank-frontend/src/app/features/admin/admin-audit-logs/admin-audit-logs.component.html b/bank-frontend/src/app/features/admin/admin-audit-logs/admin-audit-logs.component.html
+new file mode 100644
+index 0000000..47dd069
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-audit-logs/admin-audit-logs.component.html
+@@ -0,0 +1,48 @@
++<div class="admin-page">
++
++  <div class="admin-page-header">
++    <div>
++      <h1>Journal d'audit</h1>
++      <p>Historique des actions critiques effectuées sur les comptes utilisateurs.</p>
++    </div>
++  </div>
++
++  @if (errorMessage) {
++    <div class="admin-alert-error">{{ errorMessage }}</div>
++  }
++
++  <div class="admin-card">
++    <h2>Actions enregistrées ({{ logs.length }})</h2>
++
++    @if (loading) {
++      <div class="admin-empty-state">Chargement...</div>
++    } @else if (logs.length === 0) {
++      <div class="admin-empty-state">Aucune action enregistrée pour le moment.</div>
++    } @else {
++      <div class="admin-table-wrapper">
++        <table class="admin-table">
++          <thead>
++            <tr>
++              <th>Date</th>
++              <th>Action</th>
++              <th>Utilisateur concerné</th>
++              <th>Effectué par</th>
++              <th>Détails</th>
++            </tr>
++          </thead>
++          <tbody>
++            @for (log of logs; track log.id) {
++              <tr>
++                <td>{{ log.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
++                <td>{{ actionLabel(log.action) }}</td>
++                <td class="admin-mono">{{ log.targetEmail || '—' }}</td>
++                <td class="admin-mono">{{ log.performedBy }}</td>
++                <td>{{ log.details || '—' }}</td>
++              </tr>
++            }
++          </tbody>
++        </table>
++      </div>
++    }
++  </div>
++</div>
+diff --git a/bank-frontend/src/app/features/admin/admin-audit-logs/admin-audit-logs.component.ts b/bank-frontend/src/app/features/admin/admin-audit-logs/admin-audit-logs.component.ts
+new file mode 100644
+index 0000000..f113eb6
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-audit-logs/admin-audit-logs.component.ts
+@@ -0,0 +1,44 @@
++import { Component, OnInit } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { AdminUserService } from '../../../core/services/admin-user.service';
++import { AuditLogEntry } from '../../../core/models/admin-user.model';
++
++@Component({
++  selector: 'app-admin-audit-logs',
++  standalone: true,
++  imports: [CommonModule],
++  templateUrl: './admin-audit-logs.component.html',
++  styleUrl: './admin-audit-logs.component.css'
++})
++export class AdminAuditLogsComponent implements OnInit {
++
++  logs: AuditLogEntry[] = [];
++  loading = true;
++  errorMessage: string | null = null;
++
++  constructor(private adminUserService: AdminUserService) {}
++
++  ngOnInit(): void {
++    this.adminUserService.getAuditLogs().subscribe({
++      next: (logs) => {
++        this.logs = logs;
++        this.loading = false;
++      },
++      error: (err) => {
++        this.loading = false;
++        this.errorMessage = err.error?.message || 'Impossible de charger le journal d\'audit.';
++      }
++    });
++  }
++
++  actionLabel(action: string): string {
++    const labels: Record<string, string> = {
++      CREATION_UTILISATEUR: 'Création utilisateur',
++      DESACTIVATION_UTILISATEUR: 'Désactivation',
++      REACTIVATION_UTILISATEUR: 'Réactivation',
++      MODIFICATION_ROLE: 'Changement de rôle',
++      REINITIALISATION_MOT_DE_PASSE: 'Réinitialisation mot de passe'
++    };
++    return labels[action] || action;
++  }
++}
+diff --git a/bank-frontend/src/app/features/admin/admin-dashboard/admin-dashboard.component.css b/bank-frontend/src/app/features/admin/admin-dashboard/admin-dashboard.component.css
+new file mode 100644
+index 0000000..5c34016
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-dashboard/admin-dashboard.component.css
+@@ -0,0 +1 @@
++@import '../../../shared/styles/admin-common.css';
+diff --git a/bank-frontend/src/app/features/admin/admin-dashboard/admin-dashboard.component.html b/bank-frontend/src/app/features/admin/admin-dashboard/admin-dashboard.component.html
+new file mode 100644
+index 0000000..81dbe4a
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-dashboard/admin-dashboard.component.html
+@@ -0,0 +1,57 @@
++<div class="admin-page">
++
++  <div class="admin-page-header">
++    <div>
++      <h1>Tableau de bord administrateur</h1>
++      <p>Vue d'ensemble de l'activité de la plateforme en temps réel.</p>
++    </div>
++  </div>
++
++  @if (errorMessage) {
++    <div class="admin-alert-error">{{ errorMessage }}</div>
++  }
++
++  @if (loading) {
++    <div class="admin-empty-state">Chargement des statistiques...</div>
++  } @else if (stats) {
++    <div class="admin-stats-grid">
++      <div class="admin-stat-card">
++        <p class="stat-label">Clients</p>
++        <p class="stat-value">{{ stats.totalClients }}</p>
++      </div>
++      <div class="admin-stat-card">
++        <p class="stat-label">Comptes au total</p>
++        <p class="stat-value">{{ stats.totalAccounts }}</p>
++      </div>
++      <div class="admin-stat-card">
++        <p class="stat-label">Comptes courants</p>
++        <p class="stat-value">{{ stats.totalCourantAccounts }}</p>
++      </div>
++      <div class="admin-stat-card">
++        <p class="stat-label">Comptes épargne</p>
++        <p class="stat-value">{{ stats.totalEpargneAccounts }}</p>
++      </div>
++      <div class="admin-stat-card">
++        <p class="stat-label">Solde total géré</p>
++        <p class="stat-value">{{ stats.totalBalance | number:'1.3-3' }} DT</p>
++      </div>
++      <div class="admin-stat-card">
++        <p class="stat-label">Transactions aujourd'hui</p>
++        <p class="stat-value">{{ stats.transactionsToday }}</p>
++      </div>
++      <div class="admin-stat-card">
++        <p class="stat-label">Transactions au total</p>
++        <p class="stat-value">{{ stats.transactionsTotal }}</p>
++      </div>
++    </div>
++
++    <div class="admin-card">
++      <h2>Accès rapide</h2>
++      <div class="admin-action-links">
++        <a routerLink="/admin/users" class="admin-link-action">Gérer les utilisateurs →</a>
++        <a routerLink="/admin/accounts" class="admin-link-action">Gérer les comptes →</a>
++        <a routerLink="/admin/transactions" class="admin-link-action">Voir les transactions →</a>
++      </div>
++    </div>
++  }
++</div>
+diff --git a/bank-frontend/src/app/features/admin/admin-dashboard/admin-dashboard.component.ts b/bank-frontend/src/app/features/admin/admin-dashboard/admin-dashboard.component.ts
+new file mode 100644
+index 0000000..dfe5c56
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-dashboard/admin-dashboard.component.ts
+@@ -0,0 +1,34 @@
++import { Component, OnInit } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { RouterLink } from '@angular/router';
++import { AdminAccountService } from '../../../core/services/admin-account.service';
++import { AdminDashboardStats } from '../../../core/models/admin-account.model';
++
++@Component({
++  selector: 'app-admin-dashboard',
++  standalone: true,
++  imports: [CommonModule, RouterLink],
++  templateUrl: './admin-dashboard.component.html',
++  styleUrl: './admin-dashboard.component.css'
++})
++export class AdminDashboardComponent implements OnInit {
++
++  stats: AdminDashboardStats | null = null;
++  loading = true;
++  errorMessage: string | null = null;
++
++  constructor(private adminAccountService: AdminAccountService) {}
++
++  ngOnInit(): void {
++    this.adminAccountService.getDashboardStats().subscribe({
++      next: (stats) => {
++        this.stats = stats;
++        this.loading = false;
++      },
++      error: (err) => {
++        this.loading = false;
++        this.errorMessage = err.error?.message || 'Impossible de charger les statistiques.';
++      }
++    });
++  }
++}
+diff --git a/bank-frontend/src/app/features/admin/admin-transactions/admin-transactions.component.css b/bank-frontend/src/app/features/admin/admin-transactions/admin-transactions.component.css
+new file mode 100644
+index 0000000..5c34016
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-transactions/admin-transactions.component.css
+@@ -0,0 +1 @@
++@import '../../../shared/styles/admin-common.css';
+diff --git a/bank-frontend/src/app/features/admin/admin-transactions/admin-transactions.component.html b/bank-frontend/src/app/features/admin/admin-transactions/admin-transactions.component.html
+new file mode 100644
+index 0000000..0d704af
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-transactions/admin-transactions.component.html
+@@ -0,0 +1,92 @@
++<div class="admin-page">
++
++  <div class="admin-page-header">
++    <div>
++      <h1>Surveillance des transactions</h1>
++      <p>Consultez et filtrez l'ensemble des transactions de la plateforme.</p>
++    </div>
++  </div>
++
++  <div class="admin-card">
++    <h2>Filtres</h2>
++    <form [formGroup]="filterForm" (ngSubmit)="search()" class="admin-form">
++      <div class="admin-form-row">
++        <div>
++          <label>Date de début</label>
++          <input type="date" formControlName="startDate" />
++        </div>
++        <div>
++          <label>Date de fin</label>
++          <input type="date" formControlName="endDate" />
++        </div>
++        <div>
++          <label>Type</label>
++          <select formControlName="type">
++            <option value="">Tous</option>
++            <option value="DEPOT">Dépôt</option>
++            <option value="RETRAIT">Retrait</option>
++            <option value="VIREMENT_ENTRANT">Virement entrant</option>
++            <option value="VIREMENT_SORTANT">Virement sortant</option>
++          </select>
++        </div>
++        <div>
++          <label>N° de compte</label>
++          <input type="text" formControlName="accountNumber" placeholder="07807..." />
++        </div>
++      </div>
++
++      <div class="admin-action-links">
++        <button type="submit" class="admin-btn-primary">
++          <i class="ti ti-filter"></i> Filtrer
++        </button>
++        <button type="button" class="admin-btn-secondary" (click)="resetFilters()">
++          Réinitialiser
++        </button>
++      </div>
++    </form>
++  </div>
++
++  @if (errorMessage) {
++    <div class="admin-alert-error">{{ errorMessage }}</div>
++  }
++
++  <div class="admin-card">
++    <h2>Transactions ({{ transactions.length }})</h2>
++
++    @if (loading) {
++      <div class="admin-empty-state">Chargement...</div>
++    } @else if (transactions.length === 0) {
++      <div class="admin-empty-state">Aucune transaction ne correspond à ces critères.</div>
++    } @else {
++      <div class="admin-table-wrapper">
++        <table class="admin-table">
++          <thead>
++            <tr>
++              <th>Date</th>
++              <th>Compte</th>
++              <th>Client</th>
++              <th>Type</th>
++              <th>Montant</th>
++              <th>Solde après</th>
++            </tr>
++          </thead>
++          <tbody>
++            @for (t of transactions; track t.id) {
++              <tr>
++                <td>{{ t.date | date:'dd/MM/yyyy HH:mm' }}</td>
++                <td class="admin-mono">{{ t.accountNumber }}</td>
++                <td>
++                  {{ t.clientFullName }}
++                  <div class="admin-mono" style="color:#94a3b8; font-size: 11px;">{{ t.clientEmail }}</div>
++                </td>
++                <td>{{ t.type }}</td>
++                <td>{{ t.amount | number:'1.3-3' }} DT</td>
++                <td>{{ t.balanceAfter | number:'1.3-3' }} DT</td>
++              </tr>
++            }
++          </tbody>
++        </table>
++      </div>
++    }
++  </div>
++</div>
+diff --git a/bank-frontend/src/app/features/admin/admin-transactions/admin-transactions.component.ts b/bank-frontend/src/app/features/admin/admin-transactions/admin-transactions.component.ts
+new file mode 100644
+index 0000000..435b3ac
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-transactions/admin-transactions.component.ts
+@@ -0,0 +1,65 @@
++import { Component, OnInit } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
++import { AdminAccountService } from '../../../core/services/admin-account.service';
++import { AdminTransaction } from '../../../core/models/admin-account.model';
++
++@Component({
++  selector: 'app-admin-transactions',
++  standalone: true,
++  imports: [CommonModule, ReactiveFormsModule],
++  templateUrl: './admin-transactions.component.html',
++  styleUrl: './admin-transactions.component.css'
++})
++export class AdminTransactionsComponent implements OnInit {
++
++  transactions: AdminTransaction[] = [];
++  loading = true;
++  errorMessage: string | null = null;
++
++  filterForm: FormGroup;
++
++  constructor(
++    private fb: FormBuilder,
++    private adminAccountService: AdminAccountService
++  ) {
++    this.filterForm = this.fb.group({
++      startDate: [''],
++      endDate: [''],
++      type: [''],
++      accountNumber: ['']
++    });
++  }
++
++  ngOnInit(): void {
++    this.search();
++  }
++
++  search(): void {
++    this.loading = true;
++    this.errorMessage = null;
++
++    const value = this.filterForm.value;
++
++    this.adminAccountService.getTransactions({
++      startDate: value.startDate || undefined,
++      endDate: value.endDate || undefined,
++      type: value.type || undefined,
++      accountNumber: value.accountNumber || undefined
++    }).subscribe({
++      next: (transactions) => {
++        this.transactions = transactions;
++        this.loading = false;
++      },
++      error: (err) => {
++        this.loading = false;
++        this.errorMessage = err.error?.message || 'Impossible de charger les transactions.';
++      }
++    });
++  }
++
++  resetFilters(): void {
++    this.filterForm.reset({ startDate: '', endDate: '', type: '', accountNumber: '' });
++    this.search();
++  }
++}
+diff --git a/bank-frontend/src/app/features/admin/admin-users/admin-users.component.css b/bank-frontend/src/app/features/admin/admin-users/admin-users.component.css
+new file mode 100644
+index 0000000..5c34016
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-users/admin-users.component.css
+@@ -0,0 +1 @@
++@import '../../../shared/styles/admin-common.css';
+diff --git a/bank-frontend/src/app/features/admin/admin-users/admin-users.component.html b/bank-frontend/src/app/features/admin/admin-users/admin-users.component.html
+new file mode 100644
+index 0000000..88664cb
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-users/admin-users.component.html
+@@ -0,0 +1,135 @@
++<div class="admin-page">
++
++  <div class="admin-page-header">
++    <div>
++      <h1>Gestion des utilisateurs</h1>
++      <p>Créez des comptes clients ou administrateurs, gérez les accès et réinitialisez les mots de passe.</p>
++    </div>
++    <button class="admin-btn-primary" (click)="toggleCreateForm()">
++      <i class="ti" [class.ti-plus]="!showCreateForm" [class.ti-x]="showCreateForm"></i>
++      {{ showCreateForm ? 'Annuler' : 'Nouvel utilisateur' }}
++    </button>
++  </div>
++
++  @if (successMessage) {
++    <div class="admin-alert-success">{{ successMessage }}</div>
++  }
++  @if (errorMessage) {
++    <div class="admin-alert-error">{{ errorMessage }}</div>
++  }
++
++  @if (showCreateForm) {
++    <div class="admin-card">
++      <h2>Nouvel utilisateur</h2>
++      <form [formGroup]="createForm" (ngSubmit)="submitCreate()" class="admin-form">
++
++        <div class="admin-form-row">
++          <div>
++            <label>Prénom</label>
++            <input type="text" formControlName="firstName" placeholder="Amine" />
++          </div>
++          <div>
++            <label>Nom</label>
++            <input type="text" formControlName="lastName" placeholder="Ben Salah" />
++          </div>
++        </div>
++
++        <div class="admin-form-row">
++          <div>
++            <label>Email</label>
++            <input type="email" formControlName="email" placeholder="amine@example.com" />
++          </div>
++          <div>
++            <label>Mot de passe temporaire</label>
++            <input type="text" formControlName="password" placeholder="Min. 8 caractères" />
++          </div>
++        </div>
++
++        <div class="admin-form-row">
++          <div>
++            <label>Rôle</label>
++            <select formControlName="role">
++              <option value="CLIENT">Client</option>
++              <option value="ADMIN">Administrateur / Employé</option>
++            </select>
++          </div>
++        </div>
++
++        @if (createError) {
++          <div class="admin-alert-error">{{ createError }}</div>
++        }
++
++        <button type="submit" class="admin-btn-primary" [disabled]="createLoading">
++          @if (createLoading) { Création en cours... } @else { Créer l'utilisateur }
++        </button>
++      </form>
++    </div>
++  }
++
++  <div class="admin-card">
++    <h2>Utilisateurs ({{ users.length }})</h2>
++
++    @if (loading) {
++      <div class="admin-empty-state">Chargement...</div>
++    } @else if (users.length === 0) {
++      <div class="admin-empty-state">Aucun utilisateur pour le moment.</div>
++    } @else {
++      <div class="admin-table-wrapper">
++        <table class="admin-table">
++          <thead>
++            <tr>
++              <th>Nom</th>
++              <th>Email</th>
++              <th>Rôle</th>
++              <th>Statut</th>
++              <th>Actions</th>
++            </tr>
++          </thead>
++          <tbody>
++            @for (user of users; track user.id) {
++              <tr>
++                <td>{{ user.firstName }} {{ user.lastName }}</td>
++                <td class="admin-mono">{{ user.email }}</td>
++                <td>
++                  <span class="admin-badge" [class.role-admin]="user.role === 'ADMIN'" [class.role-client]="user.role === 'CLIENT'">
++                    {{ user.role === 'ADMIN' ? 'Admin' : 'Client' }}
++                  </span>
++                </td>
++                <td>
++                  <span class="admin-badge" [class.status-enabled]="user.enabled" [class.status-disabled]="!user.enabled">
++                    {{ user.enabled ? 'Actif' : 'Désactivé' }}
++                  </span>
++                </td>
++                <td>
++                  <div class="admin-action-links">
++                    <button
++                      class="admin-link-action"
++                      [disabled]="actioningUserId === user.id"
++                      (click)="changeRole(user, user.role === 'ADMIN' ? 'CLIENT' : 'ADMIN')"
++                    >
++                      Passer {{ user.role === 'ADMIN' ? 'client' : 'admin' }}
++                    </button>
++                    <button
++                      class="admin-link-action"
++                      [disabled]="actioningUserId === user.id"
++                      (click)="resetPassword(user)"
++                    >
++                      Réinitialiser mdp
++                    </button>
++                    <button
++                      class="admin-link-action muted"
++                      [disabled]="actioningUserId === user.id"
++                      (click)="toggleStatus(user)"
++                    >
++                      {{ user.enabled ? 'Désactiver' : 'Réactiver' }}
++                    </button>
++                  </div>
++                </td>
++              </tr>
++            }
++          </tbody>
++        </table>
++      </div>
++    }
++  </div>
++</div>
+diff --git a/bank-frontend/src/app/features/admin/admin-users/admin-users.component.ts b/bank-frontend/src/app/features/admin/admin-users/admin-users.component.ts
+new file mode 100644
+index 0000000..ec0f091
+--- /dev/null
++++ b/bank-frontend/src/app/features/admin/admin-users/admin-users.component.ts
+@@ -0,0 +1,140 @@
++import { Component, OnInit } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
++import { AdminUserService } from '../../../core/services/admin-user.service';
++import { AdminUser } from '../../../core/models/admin-user.model';
++import { UserRole } from '../../../core/models/auth.model';
++
++@Component({
++  selector: 'app-admin-users',
++  standalone: true,
++  imports: [CommonModule, ReactiveFormsModule],
++  templateUrl: './admin-users.component.html',
++  styleUrl: './admin-users.component.css'
++})
++export class AdminUsersComponent implements OnInit {
++
++  users: AdminUser[] = [];
++  loading = true;
++  errorMessage: string | null = null;
++  successMessage: string | null = null;
++
++  showCreateForm = false;
++  createForm: FormGroup;
++  createLoading = false;
++  createError: string | null = null;
++
++  actioningUserId: number | null = null;
++
++  constructor(
++    private fb: FormBuilder,
++    private adminUserService: AdminUserService
++  ) {
++    this.createForm = this.fb.group({
++      firstName: ['', Validators.required],
++      lastName: ['', Validators.required],
++      email: ['', [Validators.required, Validators.email]],
++      password: ['', [Validators.required, Validators.minLength(8)]],
++      role: ['CLIENT', Validators.required]
++    });
++  }
++
++  ngOnInit(): void {
++    this.loadUsers();
++  }
++
++  loadUsers(): void {
++    this.loading = true;
++    this.errorMessage = null;
++    this.adminUserService.getAllUsers().subscribe({
++      next: (users) => {
++        this.users = users;
++        this.loading = false;
++      },
++      error: (err) => {
++        this.loading = false;
++        this.errorMessage = err.error?.message || 'Impossible de charger les utilisateurs.';
++      }
++    });
++  }
++
++  toggleCreateForm(): void {
++    this.showCreateForm = !this.showCreateForm;
++    this.createError = null;
++  }
++
++  submitCreate(): void {
++    if (this.createForm.invalid) {
++      this.createForm.markAllAsTouched();
++      return;
++    }
++
++    this.createLoading = true;
++    this.createError = null;
++
++    this.adminUserService.createUser(this.createForm.value).subscribe({
++      next: () => {
++        this.createLoading = false;
++        this.showCreateForm = false;
++        this.createForm.reset({ role: 'CLIENT' });
++        this.successMessage = 'Utilisateur créé avec succès.';
++        this.loadUsers();
++        setTimeout(() => this.successMessage = null, 4000);
++      },
++      error: (err) => {
++        this.createLoading = false;
++        this.createError = err.error?.message || 'Une erreur est survenue lors de la création.';
++      }
++    });
++  }
++
++  toggleStatus(user: AdminUser): void {
++    this.actioningUserId = user.id;
++    this.adminUserService.updateStatus(user.id, { enabled: !user.enabled }).subscribe({
++      next: (updated) => {
++        this.actioningUserId = null;
++        this.applyUpdate(updated);
++      },
++      error: (err) => {
++        this.actioningUserId = null;
++        this.errorMessage = err.error?.message || 'Une erreur est survenue.';
++      }
++    });
++  }
++
++  changeRole(user: AdminUser, role: UserRole): void {
++    if (role === user.role) {
++      return;
++    }
++    this.actioningUserId = user.id;
++    this.adminUserService.updateRole(user.id, { role }).subscribe({
++      next: (updated) => {
++        this.actioningUserId = null;
++        this.applyUpdate(updated);
++      },
++      error: (err) => {
++        this.actioningUserId = null;
++        this.errorMessage = err.error?.message || 'Une erreur est survenue.';
++      }
++    });
++  }
++
++  resetPassword(user: AdminUser): void {
++    this.actioningUserId = user.id;
++    this.adminUserService.resetPassword(user.id).subscribe({
++      next: () => {
++        this.actioningUserId = null;
++        this.successMessage = `Un nouveau mot de passe a été envoyé à ${user.email}.`;
++        setTimeout(() => this.successMessage = null, 4000);
++      },
++      error: (err) => {
++        this.actioningUserId = null;
++        this.errorMessage = err.error?.message || 'Une erreur est survenue.';
++      }
++    });
++  }
++
++  private applyUpdate(updated: AdminUser): void {
++    this.users = this.users.map(u => u.id === updated.id ? updated : u);
++  }
++}
+diff --git a/bank-frontend/src/app/features/auth/verify-otp/verify-otp.component.ts b/bank-frontend/src/app/features/auth/verify-otp/verify-otp.component.ts
+index 2440a1c..854d4ac 100644
+--- a/bank-frontend/src/app/features/auth/verify-otp/verify-otp.component.ts
++++ b/bank-frontend/src/app/features/auth/verify-otp/verify-otp.component.ts
+@@ -50,9 +50,13 @@ export class VerifyOtpComponent implements OnInit {
+       email: this.email,
+       otpCode: this.form.value.otpCode
+     }).subscribe({
+-      next: () => {
++      next: (response) => {
+         this.loading = false;
+-        this.router.navigate(['/dashboard']);
++        if (response.role === 'ADMIN') {
++          this.router.navigate(['/admin/dashboard']);
++        } else {
++          this.router.navigate(['/dashboard']);
++        }
+       },
+       error: (err) => {
+         this.loading = false;
+diff --git a/bank-frontend/src/app/features/bulk-transfers/bulk-transfer.component.css b/bank-frontend/src/app/features/bulk-transfers/bulk-transfer.component.css
+new file mode 100644
+index 0000000..876455e
+--- /dev/null
++++ b/bank-frontend/src/app/features/bulk-transfers/bulk-transfer.component.css
+@@ -0,0 +1,435 @@
++.transfer-wrapper {
++  max-width: 640px;
++  margin: 0 auto;
++}
++
++.steps-indicator {
++  display: flex;
++  align-items: center;
++  gap: 14px;
++  margin-bottom: 28px;
++}
++
++.step {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++}
++
++.step span {
++  font-size: 13px;
++  color: #94a3b8;
++}
++
++.step.active span, .step.done span {
++  color: #0f172a;
++  font-weight: 600;
++}
++
++.step-circle {
++  width: 28px;
++  height: 28px;
++  border-radius: 50%;
++  background: #e2e8f0;
++  color: #94a3b8;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  font-size: 13px;
++  font-weight: 700;
++}
++
++.step.active .step-circle, .step.done .step-circle {
++  background: #a3e635;
++  color: #030d08;
++}
++
++.step-line {
++  flex: 1;
++  height: 2px;
++  background: #e2e8f0;
++}
++
++.transfer-card {
++  background: #ffffff;
++  border: 1px solid #e2e8f0;
++  border-radius: 16px;
++  padding: 28px;
++}
++
++.transfer-card h2 {
++  font-size: 18px;
++  font-weight: 700;
++  color: #0f172a;
++  margin: 0 0 8px;
++}
++
++label {
++  font-size: 12px;
++  font-weight: 600;
++  color: #64748b;
++  text-transform: uppercase;
++  letter-spacing: 0.04em;
++  display: block;
++  margin-bottom: 8px;
++}
++
++input, select {
++  width: 100%;
++  border: 1px solid #e2e8f0;
++  border-radius: 12px;
++  padding: 13px 16px;
++  font-size: 14px;
++  margin-bottom: 18px;
++  box-sizing: border-box;
++  font-family: 'Inter', sans-serif;
++  color: #0f172a;
++}
++
++input:focus, select:focus {
++  outline: none;
++  border-color: #a3e635;
++  box-shadow: 0 0 0 3px rgba(163, 230, 53, 0.15);
++}
++
++input.input-error {
++  border-color: #f87171;
++  background: #fef2f2;
++}
++
++.select-account {
++  background: #f8fafc;
++  cursor: pointer;
++}
++
++.account-preview {
++  border: 1px solid #e2e8f0;
++  border-radius: 12px;
++  padding: 12px 14px;
++  margin-bottom: 18px;
++  display: flex;
++  justify-content: space-between;
++  align-items: center;
++  background: #f8fafc;
++}
++
++.account-preview-type {
++  font-size: 13px;
++  color: #0f172a;
++  margin: 0;
++  font-weight: 600;
++}
++
++.account-preview-number {
++  font-size: 11px;
++  color: #94a3b8;
++  margin: 0;
++  font-family: 'Courier New', monospace;
++}
++
++.account-preview-balance {
++  font-size: 13px;
++  color: #0f172a;
++  margin: 0;
++  font-weight: 700;
++  font-variant-numeric: tabular-nums;
++}
++
++.file-input {
++  position: absolute;
++  width: 1px;
++  height: 1px;
++  opacity: 0;
++  overflow: hidden;
++}
++
++.file-drop {
++  position: relative;
++  margin-bottom: 10px;
++}
++
++.file-drop-label {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  gap: 10px;
++  border: 2px dashed #cbd5e1;
++  border-radius: 12px;
++  padding: 22px 16px;
++  background: #f8fafc;
++  color: #64748b;
++  font-size: 14px;
++  font-weight: 500;
++  cursor: pointer;
++  text-transform: none;
++  letter-spacing: normal;
++  margin-bottom: 0;
++  transition: all 0.15s ease;
++}
++
++.file-drop-label:hover {
++  border-color: #a3e635;
++  background: #f7fee7;
++  color: #0f172a;
++}
++
++.file-drop-label i {
++  font-size: 20px;
++}
++
++.template-link {
++  display: flex;
++  align-items: center;
++  gap: 6px;
++  background: none;
++  border: none;
++  color: #4d7c0f;
++  font-size: 12px;
++  font-weight: 600;
++  cursor: pointer;
++  padding: 8px 0 4px;
++  font-family: inherit;
++}
++
++.template-link:hover {
++  text-decoration: underline;
++}
++
++.csv-hint {
++  font-size: 12px;
++  color: #94a3b8;
++  margin: 0 0 18px;
++  line-height: 1.5;
++}
++
++.csv-hint code {
++  background: #f1f5f9;
++  border-radius: 4px;
++  padding: 1px 5px;
++  font-size: 11px;
++  color: #334155;
++}
++
++.preview-table-wrapper {
++  margin-bottom: 18px;
++  border: 1px solid #e2e8f0;
++  border-radius: 12px;
++  overflow: hidden;
++}
++
++.preview-title {
++  font-size: 12px;
++  font-weight: 600;
++  color: #64748b;
++  margin: 0;
++  padding: 10px 14px;
++  background: #f8fafc;
++  border-bottom: 1px solid #e2e8f0;
++}
++
++.preview-table {
++  width: 100%;
++  border-collapse: collapse;
++  font-size: 13px;
++}
++
++.preview-table th {
++  text-align: left;
++  font-size: 11px;
++  text-transform: uppercase;
++  letter-spacing: 0.04em;
++  color: #94a3b8;
++  font-weight: 600;
++  padding: 10px 14px;
++  background: #f8fafc;
++  border-bottom: 1px solid #e2e8f0;
++}
++
++.preview-table td {
++  padding: 10px 14px;
++  border-bottom: 1px solid #f1f5f9;
++  color: #0f172a;
++}
++
++.preview-table tr:last-child td {
++  border-bottom: none;
++}
++
++.mono {
++  font-family: 'Courier New', monospace;
++  font-size: 12px;
++}
++
++.error-detail {
++  font-size: 12px;
++  color: #b91c1c;
++}
++
++.field-error {
++  font-size: 12px;
++  color: #ef4444;
++  margin: -12px 0 16px;
++}
++
++.alert-error {
++  background: #fef2f2;
++  color: #b91c1c;
++  border: 1px solid #fee2e2;
++  border-radius: 12px;
++  padding: 12px 16px;
++  font-size: 13px;
++  margin-bottom: 18px;
++  display: flex;
++  align-items: center;
++  gap: 8px;
++}
++
++.otp-input {
++  letter-spacing: 8px;
++  font-size: 20px;
++  font-weight: 600;
++  text-align: center;
++  font-family: 'Courier New', monospace;
++}
++
++.confirmation-subtitle {
++  font-size: 13px;
++  color: #64748b;
++  margin: 0 0 20px;
++  line-height: 1.5;
++}
++
++.back-link {
++  display: flex;
++  align-items: center;
++  gap: 6px;
++  background: none;
++  border: none;
++  color: #64748b;
++  font-size: 13px;
++  cursor: pointer;
++  padding: 0;
++  margin-bottom: 16px;
++  font-family: inherit;
++}
++
++.back-link:hover {
++  color: #0f172a;
++}
++
++.results-summary {
++  display: flex;
++  gap: 12px;
++  margin-bottom: 18px;
++}
++
++.result-badge {
++  flex: 1;
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  border-radius: 12px;
++  padding: 14px 16px;
++  font-size: 14px;
++  font-weight: 600;
++}
++
++.result-badge.success {
++  background: #f0fdf4;
++  color: #15803d;
++  border: 1px solid #bbf7d0;
++}
++
++.result-badge.failed {
++  background: #fef2f2;
++  color: #b91c1c;
++  border: 1px solid #fee2e2;
++}
++
++.status-pill {
++  display: inline-block;
++  border-radius: 999px;
++  padding: 3px 10px;
++  font-size: 11px;
++  font-weight: 700;
++  text-transform: uppercase;
++  letter-spacing: 0.03em;
++}
++
++.status-pill.success {
++  background: #dcfce7;
++  color: #15803d;
++}
++
++.status-pill.failed {
++  background: #fee2e2;
++  color: #b91c1c;
++}
++
++.results-actions {
++  display: flex;
++  gap: 12px;
++  margin-top: 20px;
++}
++
++.btn-secondary {
++  flex: 1;
++  background: #f1f5f9;
++  color: #0f172a;
++  border: 1px solid #e2e8f0;
++  padding: 15px;
++  border-radius: 12px;
++  font-size: 14px;
++  font-weight: 700;
++  cursor: pointer;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  gap: 8px;
++  transition: all 0.15s ease;
++}
++
++.btn-secondary:hover {
++  background: #e2e8f0;
++}
++
++.btn-submit {
++  flex: 1;
++  width: 100%;
++  background: #a3e635;
++  color: #030d08;
++  border: none;
++  padding: 15px;
++  border-radius: 12px;
++  font-size: 14px;
++  font-weight: 700;
++  cursor: pointer;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  gap: 8px;
++  transition: all 0.15s ease;
++}
++
++.btn-submit:hover {
++  background: #bef264;
++}
++
++.btn-submit:disabled {
++  opacity: 0.5;
++  cursor: not-allowed;
++}
++
++.spinner {
++  width: 16px;
++  height: 16px;
++  border: 2px solid rgba(3, 13, 8, 0.2);
++  border-top-color: #030d08;
++  border-radius: 50%;
++  animation: spin 0.8s linear infinite;
++  display: inline-block;
++}
++
++@keyframes spin {
++  to { transform: rotate(360deg); }
++}
+diff --git a/bank-frontend/src/app/features/bulk-transfers/bulk-transfer.component.html b/bank-frontend/src/app/features/bulk-transfers/bulk-transfer.component.html
+new file mode 100644
+index 0000000..0eba24b
+--- /dev/null
++++ b/bank-frontend/src/app/features/bulk-transfers/bulk-transfer.component.html
+@@ -0,0 +1,212 @@
++<div class="transfer-wrapper">
++
++  <div class="steps-indicator">
++    <div class="step" [class.active]="step === 'upload'" [class.done]="step === 'confirmation' || step === 'results'">
++      <div class="step-circle">
++        @if (step === 'confirmation' || step === 'results') { <i class="ti ti-check"></i> } @else { 1 }
++      </div>
++      <span>Fichier CSV</span>
++    </div>
++    <div class="step-line"></div>
++    <div class="step" [class.active]="step === 'confirmation'" [class.done]="step === 'results'">
++      <div class="step-circle">
++        @if (step === 'results') { <i class="ti ti-check"></i> } @else { 2 }
++      </div>
++      <span>Confirmation</span>
++    </div>
++    <div class="step-line"></div>
++    <div class="step" [class.active]="step === 'results'">
++      <div class="step-circle">3</div>
++      <span>Résultats</span>
++    </div>
++  </div>
++
++  <div class="transfer-card">
++
++    @if (step === 'upload') {
++
++      <h2>Virement groupé (import CSV)</h2>
++      <p class="confirmation-subtitle">
++        Importez un fichier CSV contenant vos bénéficiaires pour effectuer plusieurs virements en une seule opération.
++      </p>
++
++      <form [formGroup]="uploadForm" (ngSubmit)="submitUpload()">
++
++        <label>Compte source</label>
++        <select formControlName="sourceAccountId" (change)="onAccountChange()" class="select-account">
++          @for (account of accounts; track account.id) {
++            <option [value]="account.id">
++              {{ account.type === 'COURANT' ? 'Compte courant' : 'Compte épargne' }} — {{ account.balance | number:'1.3-3' }} DT
++            </option>
++          }
++        </select>
++
++        @if (selectedAccount) {
++          <div class="account-preview">
++            <div>
++              <p class="account-preview-type">{{ selectedAccount.type === 'COURANT' ? 'Compte courant' : 'Compte épargne' }}</p>
++              <p class="account-preview-number">{{ selectedAccount.accountNumber }}</p>
++            </div>
++            <p class="account-preview-balance">{{ selectedAccount.balance | number:'1.3-3' }} DT</p>
++          </div>
++        }
++
++        <label>Fichier CSV des bénéficiaires</label>
++        <div class="file-drop">
++          <input
++            type="file"
++            accept=".csv"
++            id="csvFile"
++            class="file-input"
++            (change)="onFileSelected($event)"
++          />
++          <label for="csvFile" class="file-drop-label">
++            <i class="ti ti-file-upload"></i>
++            @if (selectedFile) {
++              <span>{{ selectedFile.name }}</span>
++            } @else {
++              <span>Cliquez pour choisir un fichier .csv</span>
++            }
++          </label>
++        </div>
++        <button type="button" class="template-link" (click)="downloadTemplate()">
++          <i class="ti ti-download"></i> Télécharger un modèle CSV
++        </button>
++
++        <p class="csv-hint">
++          Colonnes attendues : <code>destinationAccountNumber</code>, <code>amount</code>, <code>label</code> (optionnel).
++        </p>
++
++        @if (previewError) {
++          <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ previewError }}</div>
++        }
++
++        @if (previewRows.length > 0) {
++          <div class="preview-table-wrapper">
++            <p class="preview-title">Aperçu ({{ previewRows.length }} ligne(s) affichée(s))</p>
++            <table class="preview-table">
++              <thead>
++                <tr>
++                  <th>Compte destinataire</th>
++                  <th>Montant</th>
++                  <th>Motif</th>
++                </tr>
++              </thead>
++              <tbody>
++                @for (row of previewRows; track $index) {
++                  <tr>
++                    <td class="mono">{{ row.destinationAccountNumber }}</td>
++                    <td>{{ row.amount }}</td>
++                    <td>{{ row.label }}</td>
++                  </tr>
++                }
++              </tbody>
++            </table>
++          </div>
++        }
++
++        @if (errorMessage) {
++          <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ errorMessage }}</div>
++        }
++
++        <button type="submit" class="btn-submit" [disabled]="loading">
++          @if (loading) { <span class="spinner"></span> Import en cours... }
++          @else { Continuer <i class="ti ti-arrow-right"></i> }
++        </button>
++      </form>
++    }
++
++    @if (step === 'confirmation') {
++
++      <button class="back-link" (click)="backToUpload()">
++        <i class="ti ti-arrow-left"></i> Modifier le fichier
++      </button>
++
++      <h2>Confirmation du virement groupé</h2>
++      <p class="confirmation-subtitle">
++        Un code de vérification a été envoyé par email pour valider le lot de {{ totalItems }} virement(s).
++      </p>
++
++      <form [formGroup]="otpForm" (ngSubmit)="submitConfirmation()">
++
++        <label>Code de vérification</label>
++        <input
++          type="text"
++          inputmode="numeric"
++          maxlength="6"
++          formControlName="otpCode"
++          placeholder="123456"
++          class="otp-input"
++          [class.input-error]="otpControl?.invalid && otpControl?.touched"
++          autocomplete="one-time-code"
++        />
++        @if (otpControl?.invalid && otpControl?.touched) {
++          <p class="field-error">Le code doit contenir 6 chiffres.</p>
++        }
++
++        @if (errorMessage) {
++          <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ errorMessage }}</div>
++        }
++
++        <button type="submit" class="btn-submit" [disabled]="loading">
++          @if (loading) { <span class="spinner"></span> Vérification... }
++          @else { Valider les virements <i class="ti ti-check"></i> }
++        </button>
++      </form>
++    }
++
++    @if (step === 'results') {
++
++      <h2>Résultats du virement groupé</h2>
++
++      <div class="results-summary">
++        <div class="result-badge success">
++          <i class="ti ti-circle-check"></i>
++          <span>{{ successCount }} réussi(s)</span>
++        </div>
++        <div class="result-badge failed">
++          <i class="ti ti-circle-x"></i>
++          <span>{{ failedCount }} échoué(s)</span>
++        </div>
++      </div>
++
++      <div class="preview-table-wrapper">
++        <table class="preview-table">
++          <thead>
++            <tr>
++              <th>Compte destinataire</th>
++              <th>Montant</th>
++              <th>Statut</th>
++              <th>Détail</th>
++            </tr>
++          </thead>
++          <tbody>
++            @for (result of results; track $index) {
++              <tr>
++                <td class="mono">{{ result.destinationAccountNumber }}</td>
++                <td>{{ result.amount | number:'1.3-3' }} DT</td>
++                <td>
++                  @if (result.status === 'SUCCESS') {
++                    <span class="status-pill success">Réussi</span>
++                  } @else {
++                    <span class="status-pill failed">Échoué</span>
++                  }
++                </td>
++                <td class="error-detail">{{ result.errorMessage || '—' }}</td>
++              </tr>
++            }
++          </tbody>
++        </table>
++      </div>
++
++      <div class="results-actions">
++        <button type="button" class="btn-secondary" (click)="startNewBulkTransfer()">
++          <i class="ti ti-plus"></i> Nouveau virement groupé
++        </button>
++        <button type="button" class="btn-submit" (click)="goToDashboard()">
++          Retour au tableau de bord <i class="ti ti-arrow-right"></i>
++        </button>
++      </div>
++    }
++  </div>
++</div>
+diff --git a/bank-frontend/src/app/features/bulk-transfers/bulk-transfer.component.ts b/bank-frontend/src/app/features/bulk-transfers/bulk-transfer.component.ts
+new file mode 100644
+index 0000000..c9bca5a
+--- /dev/null
++++ b/bank-frontend/src/app/features/bulk-transfers/bulk-transfer.component.ts
+@@ -0,0 +1,231 @@
++import { Component, OnInit } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
++import { Router } from '@angular/router';
++import { AccountService } from '../../core/services/account.service';
++import { BulkTransferService } from '../../core/services/bulk-transfer.service';
++import { Account } from '../../core/models/account.model';
++import { BulkTransferItemResult } from '../../core/models/bulk-transfer.model';
++
++type BulkStep = 'upload' | 'confirmation' | 'results';
++
++interface CsvPreviewRow {
++  destinationAccountNumber: string;
++  amount: string;
++  label: string;
++}
++
++@Component({
++  selector: 'app-bulk-transfer',
++  standalone: true,
++  imports: [CommonModule, ReactiveFormsModule],
++  templateUrl: './bulk-transfer.component.html',
++  styleUrl: './bulk-transfer.component.css'
++})
++export class BulkTransferComponent implements OnInit {
++
++  step: BulkStep = 'upload';
++  accounts: Account[] = [];
++  selectedAccount: Account | undefined;
++
++  uploadForm: FormGroup;
++  otpForm: FormGroup;
++
++  selectedFile: File | null = null;
++  previewRows: CsvPreviewRow[] = [];
++  previewError: string | null = null;
++
++  bulkTransferId: number | null = null;
++  totalItems = 0;
++
++  results: BulkTransferItemResult[] = [];
++  successCount = 0;
++  failedCount = 0;
++
++  loading = false;
++  errorMessage: string | null = null;
++
++  constructor(
++    private fb: FormBuilder,
++    private accountService: AccountService,
++    private bulkTransferService: BulkTransferService,
++    private router: Router
++  ) {
++    this.uploadForm = this.fb.group({
++      sourceAccountId: ['', Validators.required]
++    });
++
++    this.otpForm = this.fb.group({
++      otpCode: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(6)]]
++    });
++  }
++
++  ngOnInit(): void {
++    this.accountService.getMyAccounts().subscribe({
++      next: (accounts) => {
++        this.accounts = accounts;
++        if (accounts.length > 0) {
++          this.uploadForm.patchValue({ sourceAccountId: accounts[0].id });
++          this.selectedAccount = accounts[0];
++        }
++      }
++    });
++  }
++
++  onAccountChange(): void {
++    const id = Number(this.uploadForm.value.sourceAccountId);
++    this.selectedAccount = this.accounts.find(a => a.id === id);
++  }
++
++  onFileSelected(event: Event): void {
++    const input = event.target as HTMLInputElement;
++    const file = input.files && input.files.length > 0 ? input.files[0] : null;
++    this.selectedFile = file;
++    this.previewRows = [];
++    this.previewError = null;
++    this.errorMessage = null;
++
++    if (!file) {
++      return;
++    }
++
++    if (!file.name.toLowerCase().endsWith('.csv')) {
++      this.previewError = 'Le fichier doit être au format CSV.';
++      this.selectedFile = null;
++      return;
++    }
++
++    this.parseCsvPreview(file);
++  }
++
++  private parseCsvPreview(file: File): void {
++    const reader = new FileReader();
++    reader.onload = () => {
++      const text = String(reader.result || '');
++      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
++
++      if (lines.length <= 1) {
++        this.previewError = 'Le fichier CSV ne contient aucune ligne de données.';
++        return;
++      }
++
++      const dataLines = lines.slice(1, 21); // preview first 20 rows max
++      const rows: CsvPreviewRow[] = [];
++
++      for (const line of dataLines) {
++        const parts = line.split(',').map(p => p.trim());
++        rows.push({
++          destinationAccountNumber: parts[0] ?? '',
++          amount: parts[1] ?? '',
++          label: parts[2] ?? ''
++        });
++      }
++
++      this.previewRows = rows;
++    };
++    reader.onerror = () => {
++      this.previewError = 'Impossible de lire le fichier sélectionné.';
++    };
++    reader.readAsText(file, 'UTF-8');
++  }
++
++  downloadTemplate(): void {
++    const csvContent = 'destinationAccountNumber,amount,label\n07807XXXXXXXXXXXXXXX,100.000,Loyer\n07807YYYYYYYYYYYYYYY,50.500,Fournisseur\n';
++    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
++    const url = URL.createObjectURL(blob);
++    const link = document.createElement('a');
++    link.href = url;
++    link.download = 'modele_virements_groupes.csv';
++    link.click();
++    URL.revokeObjectURL(url);
++  }
++
++  submitUpload(): void {
++    if (this.uploadForm.invalid || !this.selectedFile) {
++      this.uploadForm.markAllAsTouched();
++      if (!this.selectedFile) {
++        this.previewError = 'Veuillez sélectionner un fichier CSV.';
++      }
++      return;
++    }
++
++    this.loading = true;
++    this.errorMessage = null;
++
++    const sourceAccountId = Number(this.uploadForm.value.sourceAccountId);
++
++    this.bulkTransferService.initiateBulkTransfer(sourceAccountId, this.selectedFile).subscribe({
++      next: (response) => {
++        this.loading = false;
++        this.bulkTransferId = response.bulkTransferId;
++        this.totalItems = response.totalItems;
++        this.step = 'confirmation';
++      },
++      error: (err) => {
++        this.loading = false;
++        this.errorMessage = err.error?.message || 'Une erreur est survenue lors de l\'import du fichier.';
++      }
++    });
++  }
++
++  submitConfirmation(): void {
++    const rawOtp = this.otpForm.value.otpCode || '';
++    const cleanOtp = String(rawOtp).replace(/\D/g, '').trim();
++
++    if (cleanOtp !== rawOtp) {
++      this.otpForm.patchValue({ otpCode: cleanOtp }, { emitEvent: false });
++    }
++
++    if (this.otpForm.invalid || this.bulkTransferId === null) {
++      this.otpForm.markAllAsTouched();
++      return;
++    }
++
++    this.loading = true;
++    this.errorMessage = null;
++
++    this.bulkTransferService.confirmBulkTransfer({
++      bulkTransferId: this.bulkTransferId,
++      otpCode: cleanOtp
++    }).subscribe({
++      next: (response) => {
++        this.loading = false;
++        this.results = response.results;
++        this.successCount = response.successCount;
++        this.failedCount = response.failedCount;
++        this.step = 'results';
++      },
++      error: (err) => {
++        this.loading = false;
++        this.errorMessage = err.error?.message || 'Code incorrect, veuillez réessayer.';
++      }
++    });
++  }
++
++  backToUpload(): void {
++    this.step = 'upload';
++    this.errorMessage = null;
++  }
++
++  goToDashboard(): void {
++    this.router.navigate(['/dashboard']);
++  }
++
++  startNewBulkTransfer(): void {
++    this.step = 'upload';
++    this.selectedFile = null;
++    this.previewRows = [];
++    this.previewError = null;
++    this.errorMessage = null;
++    this.bulkTransferId = null;
++    this.totalItems = 0;
++    this.results = [];
++    this.successCount = 0;
++    this.failedCount = 0;
++    this.otpForm.reset();
++  }
++
++  get otpControl() {
++    return this.otpForm.get('otpCode');
++  }
++}
+diff --git a/bank-frontend/src/app/features/transfers/transfer.component.css b/bank-frontend/src/app/features/transfers/transfer.component.css
+index e72e837..8a60248 100644
+--- a/bank-frontend/src/app/features/transfers/transfer.component.css
++++ b/bank-frontend/src/app/features/transfers/transfer.component.css
+@@ -64,6 +64,31 @@
+   margin: 0 0 20px;
+ }
+ 
++.header-row {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  margin-bottom: 20px;
++}
++
++.header-row h2 {
++  margin: 0;
++}
++
++.bulk-link {
++  display: flex;
++  align-items: center;
++  gap: 6px;
++  font-size: 12px;
++  font-weight: 600;
++  color: #4d7c0f;
++  text-decoration: none;
++}
++
++.bulk-link:hover {
++  text-decoration: underline;
++}
++
+ label {
+   font-size: 12px;
+   font-weight: 600;
+diff --git a/bank-frontend/src/app/features/transfers/transfer.component.html b/bank-frontend/src/app/features/transfers/transfer.component.html
+index 6b77ad8..930a3e7 100644
+--- a/bank-frontend/src/app/features/transfers/transfer.component.html
++++ b/bank-frontend/src/app/features/transfers/transfer.component.html
+@@ -18,7 +18,12 @@
+ 
+     @if (step === 'details') {
+ 
+-      <h2>Nouveau virement</h2>
++      <div class="header-row">
++        <h2>Nouveau virement</h2>
++        <a routerLink="/transfers/bulk" class="bulk-link">
++          <i class="ti ti-file-spreadsheet"></i> Importer un CSV
++        </a>
++      </div>
+ 
+       <form [formGroup]="detailsForm" (ngSubmit)="submitDetails()">
+ 
+diff --git a/bank-frontend/src/app/features/transfers/transfer.component.ts b/bank-frontend/src/app/features/transfers/transfer.component.ts
+index c91ba75..83e5c3b 100644
+--- a/bank-frontend/src/app/features/transfers/transfer.component.ts
++++ b/bank-frontend/src/app/features/transfers/transfer.component.ts
+@@ -1,7 +1,7 @@
+ import { Component, OnInit } from '@angular/core';
+ import { CommonModule } from '@angular/common';
+ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+-import { Router } from '@angular/router';
++import { Router, RouterLink } from '@angular/router';
+ import { AccountService } from '../../core/services/account.service';
+ import { TransferService } from '../../core/services/transfer.service';
+ import { Account } from '../../core/models/account.model';
+@@ -11,7 +11,7 @@ type TransferStep = 'details' | 'confirmation';
+ @Component({
+   selector: 'app-transfer',
+   standalone: true,
+-  imports: [CommonModule, ReactiveFormsModule],
++  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+   templateUrl: './transfer.component.html',
+   styleUrl: './transfer.component.css'
+ })
+diff --git a/bank-frontend/src/app/shared/admin-layout/admin-layout.component.css b/bank-frontend/src/app/shared/admin-layout/admin-layout.component.css
+new file mode 100644
+index 0000000..9d024b9
+--- /dev/null
++++ b/bank-frontend/src/app/shared/admin-layout/admin-layout.component.css
+@@ -0,0 +1,117 @@
++.app-shell {
++  display: grid;
++  grid-template-columns: 220px 1fr;
++  min-height: 100vh;
++  font-family: 'Inter', system-ui, -apple-system, sans-serif;
++  background: #f8fafc;
++}
++
++.sidebar {
++  background: #030d08;
++  padding: 28px 20px;
++  display: flex;
++  flex-direction: column;
++  position: sticky;
++  top: 0;
++  height: 100vh;
++}
++
++.sidebar-brand {
++  display: flex;
++  align-items: center;
++  gap: 10px;
++  margin-bottom: 36px;
++}
++
++.sidebar-brand span {
++  color: #ffffff;
++  font-weight: 800;
++  font-size: 15px;
++  letter-spacing: -0.02em;
++}
++
++.sidebar-brand span small {
++  display: block;
++  color: #a3e635;
++  font-weight: 700;
++  font-size: 10px;
++  letter-spacing: 0.08em;
++  text-transform: uppercase;
++}
++
++.sidebar-nav {
++  display: flex;
++  flex-direction: column;
++  gap: 4px;
++}
++
++.nav-item {
++  padding: 10px 14px;
++  display: flex;
++  align-items: center;
++  gap: 10px;
++  color: #94a3b8;
++  font-size: 13px;
++  font-weight: 500;
++  text-decoration: none;
++  border-radius: 10px;
++  transition: all 0.15s ease;
++}
++
++.nav-item i {
++  font-size: 17px;
++}
++
++.nav-item:hover {
++  background: rgba(255, 255, 255, 0.04);
++  color: #ffffff;
++}
++
++.nav-item.active {
++  background: rgba(163, 230, 53, 0.12);
++  color: #a3e635;
++}
++
++.logout-button {
++  margin-top: auto;
++  padding: 10px 14px;
++  display: flex;
++  align-items: center;
++  gap: 10px;
++  color: #94a3b8;
++  font-size: 13px;
++  border-top: 1px solid rgba(255, 255, 255, 0.08);
++  padding-top: 16px;
++  background: none;
++  border: none;
++  border-left: none;
++  border-right: none;
++  border-bottom: none;
++  cursor: pointer;
++  font-family: inherit;
++  text-align: left;
++  width: 100%;
++}
++
++.logout-button i {
++  font-size: 17px;
++}
++
++.logout-button:hover {
++  color: #ffffff;
++}
++
++.app-content {
++  padding: 32px 36px;
++  overflow-y: auto;
++}
++
++@media (max-width: 900px) {
++  .app-shell {
++    grid-template-columns: 1fr;
++  }
++
++  .sidebar {
++    display: none;
++  }
++}
+diff --git a/bank-frontend/src/app/shared/admin-layout/admin-layout.component.html b/bank-frontend/src/app/shared/admin-layout/admin-layout.component.html
+new file mode 100644
+index 0000000..68f3500
+--- /dev/null
++++ b/bank-frontend/src/app/shared/admin-layout/admin-layout.component.html
+@@ -0,0 +1,38 @@
++<div class="app-shell">
++
++  <aside class="sidebar">
++    <div class="sidebar-brand">
++      <svg width="32" height="32" viewBox="0 0 46 46" fill="none">
++        <rect width="46" height="46" rx="14" fill="#a3e635"/>
++        <path d="M12 34V12H19L24 23L29 12H34V34H29V20L24 30L19 20V34H12Z" fill="#030d08"/>
++      </svg>
++      <span>AMMEN BANK <small>Admin</small></span>
++    </div>
++
++    <nav class="sidebar-nav">
++      <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item">
++        <i class="ti ti-layout-dashboard"></i> Tableau de bord
++      </a>
++      <a routerLink="/admin/users" routerLinkActive="active" class="nav-item">
++        <i class="ti ti-users"></i> Utilisateurs
++      </a>
++      <a routerLink="/admin/accounts" routerLinkActive="active" class="nav-item">
++        <i class="ti ti-credit-card"></i> Comptes
++      </a>
++      <a routerLink="/admin/transactions" routerLinkActive="active" class="nav-item">
++        <i class="ti ti-list-details"></i> Transactions
++      </a>
++      <a routerLink="/admin/audit-logs" routerLinkActive="active" class="nav-item">
++        <i class="ti ti-shield-check"></i> Journal d'audit
++      </a>
++    </nav>
++
++    <button class="logout-button" (click)="logout()">
++      <i class="ti ti-logout"></i> Déconnexion
++    </button>
++  </aside>
++
++  <main class="app-content">
++    <router-outlet></router-outlet>
++  </main>
++</div>
+diff --git a/bank-frontend/src/app/shared/admin-layout/admin-layout.component.ts b/bank-frontend/src/app/shared/admin-layout/admin-layout.component.ts
+new file mode 100644
+index 0000000..110fb4f
+--- /dev/null
++++ b/bank-frontend/src/app/shared/admin-layout/admin-layout.component.ts
+@@ -0,0 +1,24 @@
++import { Component } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
++import { AuthService } from '../../core/services/auth.service';
++
++@Component({
++  selector: 'app-admin-layout',
++  standalone: true,
++  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
++  templateUrl: './admin-layout.component.html',
++  styleUrl: './admin-layout.component.css'
++})
++export class AdminLayoutComponent {
++
++  constructor(
++    private authService: AuthService,
++    private router: Router
++  ) {}
++
++  logout(): void {
++    this.authService.logout();
++    this.router.navigate(['/login']);
++  }
++}
+diff --git a/bank-frontend/src/app/shared/layout/layout.component.html b/bank-frontend/src/app/shared/layout/layout.component.html
+index db17c0e..698349f 100644
+--- a/bank-frontend/src/app/shared/layout/layout.component.html
++++ b/bank-frontend/src/app/shared/layout/layout.component.html
+@@ -19,6 +19,9 @@
+       <a routerLink="/transfers" routerLinkActive="active" class="nav-item">
+         <i class="ti ti-arrows-exchange"></i> Virements
+       </a>
++      <a routerLink="/transfers/bulk" routerLinkActive="active" class="nav-item">
++        <i class="ti ti-file-spreadsheet"></i> Virements groupés
++      </a>
+       <a routerLink="/recurring-transfers" routerLinkActive="active" class="nav-item">
+         <i class="ti ti-repeat"></i> Permanents
+       </a>
+diff --git a/bank-frontend/src/app/shared/styles/admin-common.css b/bank-frontend/src/app/shared/styles/admin-common.css
+new file mode 100644
+index 0000000..db232e4
+--- /dev/null
++++ b/bank-frontend/src/app/shared/styles/admin-common.css
+@@ -0,0 +1,300 @@
++.admin-page {
++  max-width: 1100px;
++  margin: 0 auto;
++}
++
++.admin-page-header {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  margin-bottom: 24px;
++}
++
++.admin-page-header h1 {
++  font-size: 22px;
++  font-weight: 800;
++  color: #0f172a;
++  margin: 0;
++}
++
++.admin-page-header p {
++  font-size: 13px;
++  color: #64748b;
++  margin: 4px 0 0;
++}
++
++.admin-card {
++  background: #ffffff;
++  border: 1px solid #e2e8f0;
++  border-radius: 16px;
++  padding: 24px;
++  margin-bottom: 20px;
++}
++
++.admin-card h2 {
++  font-size: 15px;
++  font-weight: 700;
++  color: #0f172a;
++  margin: 0 0 16px;
++}
++
++.admin-stats-grid {
++  display: grid;
++  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
++  gap: 16px;
++  margin-bottom: 24px;
++}
++
++.admin-stat-card {
++  background: #ffffff;
++  border: 1px solid #e2e8f0;
++  border-radius: 16px;
++  padding: 18px 20px;
++}
++
++.admin-stat-card .stat-label {
++  font-size: 11px;
++  font-weight: 600;
++  text-transform: uppercase;
++  letter-spacing: 0.04em;
++  color: #94a3b8;
++  margin: 0 0 8px;
++}
++
++.admin-stat-card .stat-value {
++  font-size: 24px;
++  font-weight: 800;
++  color: #0f172a;
++  margin: 0;
++  font-variant-numeric: tabular-nums;
++}
++
++.admin-btn-primary {
++  background: #a3e635;
++  color: #030d08;
++  border: none;
++  padding: 11px 18px;
++  border-radius: 10px;
++  font-size: 13px;
++  font-weight: 700;
++  cursor: pointer;
++  display: inline-flex;
++  align-items: center;
++  gap: 8px;
++  transition: all 0.15s ease;
++}
++
++.admin-btn-primary:hover {
++  background: #bef264;
++}
++
++.admin-btn-primary:disabled {
++  opacity: 0.5;
++  cursor: not-allowed;
++}
++
++.admin-btn-secondary {
++  background: #f1f5f9;
++  color: #0f172a;
++  border: 1px solid #e2e8f0;
++  padding: 10px 16px;
++  border-radius: 10px;
++  font-size: 13px;
++  font-weight: 600;
++  cursor: pointer;
++  display: inline-flex;
++  align-items: center;
++  gap: 6px;
++  transition: all 0.15s ease;
++}
++
++.admin-btn-secondary:hover {
++  background: #e2e8f0;
++}
++
++.admin-btn-danger {
++  background: #fef2f2;
++  color: #b91c1c;
++  border: 1px solid #fee2e2;
++  padding: 8px 14px;
++  border-radius: 8px;
++  font-size: 12px;
++  font-weight: 700;
++  cursor: pointer;
++}
++
++.admin-btn-danger:hover {
++  background: #fee2e2;
++}
++
++.admin-table-wrapper {
++  border: 1px solid #e2e8f0;
++  border-radius: 14px;
++  overflow: hidden;
++}
++
++.admin-table {
++  width: 100%;
++  border-collapse: collapse;
++  font-size: 13px;
++}
++
++.admin-table th {
++  text-align: left;
++  font-size: 11px;
++  text-transform: uppercase;
++  letter-spacing: 0.04em;
++  color: #94a3b8;
++  font-weight: 600;
++  padding: 12px 16px;
++  background: #f8fafc;
++  border-bottom: 1px solid #e2e8f0;
++}
++
++.admin-table td {
++  padding: 12px 16px;
++  border-bottom: 1px solid #f1f5f9;
++  color: #0f172a;
++}
++
++.admin-table tr:last-child td {
++  border-bottom: none;
++}
++
++.admin-mono {
++  font-family: 'Courier New', monospace;
++  font-size: 12px;
++}
++
++.admin-badge {
++  display: inline-block;
++  border-radius: 999px;
++  padding: 3px 10px;
++  font-size: 11px;
++  font-weight: 700;
++  text-transform: uppercase;
++  letter-spacing: 0.03em;
++}
++
++.admin-badge.role-admin {
++  background: #ede9fe;
++  color: #6d28d9;
++}
++
++.admin-badge.role-client {
++  background: #e0f2fe;
++  color: #0369a1;
++}
++
++.admin-badge.status-enabled {
++  background: #dcfce7;
++  color: #15803d;
++}
++
++.admin-badge.status-disabled {
++  background: #fee2e2;
++  color: #b91c1c;
++}
++
++.admin-badge.type-courant {
++  background: #e0f2fe;
++  color: #0369a1;
++}
++
++.admin-badge.type-epargne {
++  background: #fef9c3;
++  color: #a16207;
++}
++
++.admin-form-row {
++  display: grid;
++  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
++  gap: 14px;
++  margin-bottom: 16px;
++}
++
++.admin-form-row label,
++.admin-form label {
++  font-size: 12px;
++  font-weight: 600;
++  color: #64748b;
++  text-transform: uppercase;
++  letter-spacing: 0.04em;
++  display: block;
++  margin-bottom: 6px;
++}
++
++.admin-form-row input,
++.admin-form-row select,
++.admin-form input,
++.admin-form select {
++  width: 100%;
++  border: 1px solid #e2e8f0;
++  border-radius: 10px;
++  padding: 11px 14px;
++  font-size: 13px;
++  box-sizing: border-box;
++  font-family: 'Inter', sans-serif;
++  color: #0f172a;
++}
++
++.admin-form-row input:focus,
++.admin-form-row select:focus,
++.admin-form input:focus,
++.admin-form select:focus {
++  outline: none;
++  border-color: #a3e635;
++  box-shadow: 0 0 0 3px rgba(163, 230, 53, 0.15);
++}
++
++.admin-alert-error {
++  background: #fef2f2;
++  color: #b91c1c;
++  border: 1px solid #fee2e2;
++  border-radius: 10px;
++  padding: 10px 14px;
++  font-size: 13px;
++  margin-bottom: 16px;
++}
++
++.admin-alert-success {
++  background: #f0fdf4;
++  color: #15803d;
++  border: 1px solid #bbf7d0;
++  border-radius: 10px;
++  padding: 10px 14px;
++  font-size: 13px;
++  margin-bottom: 16px;
++}
++
++.admin-empty-state {
++  text-align: center;
++  padding: 40px 20px;
++  color: #94a3b8;
++  font-size: 13px;
++}
++
++.admin-action-links {
++  display: flex;
++  gap: 8px;
++  flex-wrap: wrap;
++}
++
++.admin-link-action {
++  background: none;
++  border: none;
++  color: #4d7c0f;
++  font-size: 12px;
++  font-weight: 600;
++  cursor: pointer;
++  padding: 4px 0;
++  font-family: inherit;
++}
++
++.admin-link-action:hover {
++  text-decoration: underline;
++}
++
++.admin-link-action.muted {
++  color: #64748b;
++}

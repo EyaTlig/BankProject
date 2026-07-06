@@ -1,0 +1,63 @@
+<h1 class="page-title">Tableau de bord administrateur</h1>
+
+@if (loading()) {
+  <div class="loading-state">Chargement des statistiques...</div>
+} @else if (error()) {
+  <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+} @else if (stats(); as s) {
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon"><i class="ti ti-users"></i></div>
+      <div>
+        <span class="stat-value">{{ s.totalAccounts }}</span>
+        <span class="stat-label">Comptes ouverts</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon"><i class="ti ti-receipt"></i></div>
+      <div>
+        <span class="stat-value">{{ s.totalTransactions }}</span>
+        <span class="stat-label">Transactions</span>
+      </div>
+    </div>
+
+    <div class="stat-card highlight">
+      <div class="stat-icon"><i class="ti ti-cash"></i></div>
+      <div>
+        <span class="stat-value">{{ s.totalBalance | number:'1.0-0':'fr' }} DT</span>
+        <span class="stat-label">Solde cumulé de la banque</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon"><i class="ti ti-arrow-up-right"></i></div>
+      <div>
+        <span class="stat-value">{{ s.totalTransfersSortants }}</span>
+        <span class="stat-label">Virements sortants</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon"><i class="ti ti-arrow-down-left"></i></div>
+      <div>
+        <span class="stat-value">{{ s.totalTransfersEntrants }}</span>
+        <span class="stat-label">Virements entrants</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="quick-links">
+    <a routerLink="/admin/users" class="quick-link">
+      <i class="ti ti-user-cog"></i>
+      <span>Gérer les utilisateurs</span>
+      <i class="ti ti-arrow-right"></i>
+    </a>
+    <a routerLink="/admin/credits" class="quick-link">
+      <i class="ti ti-receipt-2"></i>
+      <span>Traiter les demandes de crédit</span>
+      <i class="ti ti-arrow-right"></i>
+    </a>
+  </div>
+}
