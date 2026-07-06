@@ -1,0 +1,66 @@
+<div class="chatbot-root">
+  @if (isOpen()) {
+    <div class="chatbot-panel">
+      <div class="chatbot-header">
+        <div class="chatbot-title">
+          <i class="ti ti-message-chatbot"></i>
+          <span>Assia · Assistante Bank Platform</span>
+        </div>
+        <button class="chatbot-close" (click)="toggleOpen()" aria-label="Fermer">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+
+      <div class="chatbot-messages" #messagesContainer>
+        @for (msg of messages(); track $index) {
+          <div class="chatbot-message" [class.user]="msg.role === 'user'">
+            <div class="bubble">{{ msg.content }}</div>
+          </div>
+        }
+
+        @if (isLoading()) {
+          <div class="chatbot-message">
+            <div class="bubble typing">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        }
+
+        @if (errorMessage()) {
+          <div class="chatbot-error">{{ errorMessage() }}</div>
+        }
+      </div>
+
+      @if (suggestions().length > 0) {
+        <div class="chatbot-suggestions">
+          @for (s of suggestions(); track s.path) {
+            <button class="suggestion-chip" (click)="goTo(s.path)">
+              {{ s.label }}
+            </button>
+          }
+        </div>
+      }
+
+      <div class="chatbot-input-row">
+        <input
+          type="text"
+          placeholder="Écris ta question..."
+          [(ngModel)]="draft"
+          (keydown.enter)="send()"
+          [disabled]="isLoading()"
+        />
+        <button class="send-button" (click)="send()" [disabled]="isLoading() || !draft.trim()">
+          <i class="ti ti-send"></i>
+        </button>
+      </div>
+    </div>
+  }
+
+  <button class="chatbot-fab" (click)="toggleOpen()" aria-label="Ouvrir le chat">
+    @if (isOpen()) {
+      <i class="ti ti-x"></i>
+    } @else {
+      <i class="ti ti-message-chatbot"></i>
+    }
+  </button>
+</div>
