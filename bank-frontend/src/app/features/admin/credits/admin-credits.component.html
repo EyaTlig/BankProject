@@ -1,0 +1,83 @@
+<h1 class="page-title">Demandes de crédit</h1>
+
+<div class="filter-tabs">
+  <button class="filter-tab" [class.active]="activeFilter() === 'PENDING'" (click)="setFilter('PENDING')">
+    En attente @if (pendingCount() > 0) { <span class="count-badge">{{ pendingCount() }}</span> }
+  </button>
+  <button class="filter-tab" [class.active]="activeFilter() === 'APPROVED'" (click)="setFilter('APPROVED')">Approuvées</button>
+  <button class="filter-tab" [class.active]="activeFilter() === 'REJECTED'" (click)="setFilter('REJECTED')">Refusées</button>
+  <button class="filter-tab" [class.active]="activeFilter() === 'ALL'" (click)="setFilter('ALL')">Toutes</button>
+</div>
+
+@if (error()) {
+  <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+}
+
+@if (loading()) {
+  <div class="loading-state">Chargement des demandes...</div>
+} @else if (filteredRequests().length === 0) {
+  <div class="empty-state">Aucune demande dans cette catégorie.</div>
+} @else {
+
+  <div class="requests-list">
+    @for (req of filteredRequests(); track req.id) {
+      <div class="request-card" [class.row-pending]="actionPendingId() === req.id">
+
+        <div class="request-header">
+          <div>
+            <span class="request-type">{{ typeLabel(req.type) }}</span>
+            <span class="request-client">Demande #{{ req.id }}</span>
+          </div>
+          <span class="status-badge" [class]="req.status.toLowerCase()">{{ statusLabel(req.status) }}</span>
+        </div>
+
+        <div class="request-amount">{{ req.amount | number:'1.0-0':'fr' }} DT</div>
+
+        <div class="request-meta">
+          <span><i class="ti ti-calendar-time"></i> {{ req.durationMonths }} mois</span>
+          <span><i class="ti ti-percentage"></i> {{ req.interestRate }} %</span>
+          <span><i class="ti ti-cash"></i> {{ req.monthlyPayment | number:'1.0-0':'fr' }} DT/mois</span>
+          <span><i class="ti ti-calendar"></i> {{ req.createdAt | date:'dd/MM/yyyy':'fr' }}</span>
+        </div>
+
+        @if (req.purpose) {
+          <p class="request-purpose"><i class="ti ti-note"></i> {{ req.purpose }}</p>
+        }
+
+        @if (req.adminComment) {
+          <p class="request-comment"><i class="ti ti-message-circle"></i> {{ req.adminComment }}</p>
+        }
+
+        @if (req.status === 'PENDING') {
+
+          @if (rejectingId() === req.id) {
+            <div class="reject-panel">
+              <label>Motif du refus (optionnel)</label>
+              <textarea
+                rows="2"
+                placeholder="Expliquez la raison du refus..."
+                [value]="commentDraft()[req.id] || ''"
+                (input)="onCommentChange(req.id, $any($event.target).value)"
+              ></textarea>
+              <div class="reject-actions">
+                <button class="btn-cancel" (click)="cancelReject()">Annuler</button>
+                <button class="btn-confirm-danger" [disabled]="actionPendingId() === req.id" (click)="confirmReject(req)">
+                  Confirmer le refus
+                </button>
+              </div>
+            </div>
+          } @else {
+            <div class="request-actions">
+              <button class="btn-approve" [disabled]="actionPendingId() === req.id" (click)="approve(req)">
+                <i class="ti ti-check"></i> Approuver
+              </button>
+              <button class="btn-reject" [disabled]="actionPendingId() === req.id" (click)="startReject(req.id)">
+                <i class="ti ti-x"></i> Refuser
+              </button>
+            </div>
+          }
+        }
+      </div>
+    }
+  </div>
+}

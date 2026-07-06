@@ -1,6 +1,8 @@
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\AccountServiceApplication.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\AccountResponse.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\AccountService.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\AdminAccountService.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\AdminStatsResponse.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\BulkTransferItemResult.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\BulkTransferService.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\ConfirmBulkTransferRequest.java
@@ -43,6 +45,7 @@ C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\ja
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\infrastructure\TransferRepository.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\infrastructure\UserCreatedListener.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\presentation\AccountController.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\presentation\AdminAccountController.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\presentation\BulkTransferController.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\presentation\RecurringTransferController.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\presentation\TransferController.java

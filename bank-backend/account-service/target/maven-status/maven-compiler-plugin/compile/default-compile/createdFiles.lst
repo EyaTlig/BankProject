@@ -4,6 +4,7 @@ tn\bank\accountservice\presentation\BulkTransferController.class
 tn\bank\accountservice\application\InitiateTransferResponse.class
 tn\bank\accountservice\domain\Client.class
 tn\bank\accountservice\domain\RecurringTransfer$RecurringTransferBuilder.class
+tn\bank\accountservice\presentation\AdminAccountController.class
 tn\bank\accountservice\infrastructure\RecurringTransferRepository.class
 tn\bank\accountservice\domain\BulkTransfer.class
 tn\bank\accountservice\domain\TransferStatus.class
@@ -17,6 +18,7 @@ tn\bank\accountservice\domain\Transfer$TransferBuilder.class
 tn\bank\accountservice\presentation\RecurringTransferController.class
 tn\bank\accountservice\domain\BulkTransferItem.class
 tn\bank\accountservice\infrastructure\TransferOtpService.class
+tn\bank\accountservice\application\AdminAccountService.class
 tn\bank\accountservice\domain\BulkTransferItemStatus.class
 tn\bank\accountservice\application\BulkTransferService.class
 tn\bank\accountservice\application\RecurringTransferResponse.class
@@ -26,6 +28,7 @@ tn\bank\accountservice\application\CreateRecurringTransferRequest.class
 tn\bank\accountservice\application\InitiateBulkTransferResponse.class
 tn\bank\accountservice\domain\Transfer.class
 tn\bank\accountservice\domain\RecurringTransferStatus.class
+tn\bank\accountservice\application\AdminStatsResponse.class
 tn\bank\accountservice\domain\Account.class
 tn\bank\accountservice\application\RecurringTransferService.class
 tn\bank\accountservice\application\ConfirmTransferResponse.class

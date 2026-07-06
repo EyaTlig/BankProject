@@ -18,8 +18,12 @@
 
     @if (step === 'details') {
 
-      <h2>Nouveau virement</h2>
-
+            <div class="header-row">
+                <h2>Nouveau virement</h2>
+                <a routerLink="/transfers/bulk" class="bulk-link">
+                 <i class="ti ti-file-spreadsheet"></i> Importer un CSV
+               </a>
+              </div>
       <form [formGroup]="detailsForm" (ngSubmit)="submitDetails()">
 
         <label>Compte source</label>

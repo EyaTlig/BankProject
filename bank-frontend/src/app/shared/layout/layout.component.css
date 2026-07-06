@@ -7,7 +7,7 @@
 }
 
 .sidebar {
-  background: #030d08;
+  background: #0c2618;
   padding: 28px 20px;
   display: flex;
   flex-direction: column;
@@ -16,6 +16,15 @@
   height: 100vh;
 }
 
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 16px;
+  color: #FFFFFF;
+  text-decoration: none;
+}
 .sidebar-brand {
   display: flex;
   align-items: center;
@@ -61,6 +70,21 @@
 .nav-item.active {
   background: rgba(163, 230, 53, 0.12);
   color: #a3e635;
+}
+
+.nav-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 12px 6px 8px;
+}
+
+.nav-section-label {
+  padding: 0 14px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
 }
 
 .logout-button {

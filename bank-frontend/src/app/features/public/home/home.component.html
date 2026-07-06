@@ -3,7 +3,7 @@
   <header class="nav">
     <div class="nav-inner">
       <a class="nav-brand" routerLink="/">
-        <img src="/ammenlogo.jfif" alt="AMEN BANK Logo" class="brand-logo" />
+        <img src="/ammenlogo.png" alt="AMEN BANK Logo" class="brand-logo" />
         <span>AMMEN BANK <small class="brand-badge">Digital</small></span>
       </a>
 
@@ -61,7 +61,11 @@
               <p class="simulator-sublabel">Estimez votre crédit instantanément</p>
             </div>
             <div class="icon-wrapper">
-              <i class="ti ti-calculator"></i>
+              @if (simulating()) {
+                <span class="live-dot"></span>
+              } @else {
+                <i class="ti ti-calculator"></i>
+              }
             </div>
           </div>
 
@@ -107,7 +111,13 @@
             </div>
           </div>
 
-          <div class="simulator-result">
+          @if (simulationError()) {
+            <div class="simulator-error">
+              <i class="ti ti-alert-circle"></i>
+              <span>Simulation momentanément indisponible.</span>
+            </div>
+          } @else {
+            <div class="simulator-result">
             <div class="simulator-result-main">
               <span class="result-label">Mensualité estimée (TTC)</span>
               <span class="result-value">
@@ -128,7 +138,8 @@
                 <span class="detail-value-badge">{{ annualRate }} %</span>
               </div>
             </div>
-          </div>
+            </div>
+          }
 
           <a routerLink="/register" class="simulator-cta">
             Obtenir un accord de principe <i class="ti ti-arrow-right"></i>
@@ -219,7 +230,7 @@
     <div class="section-inner footer-inner">
       <div class="footer-brand">
         <div class="nav-brand">
-          <img src="/ammenlogo.jfif" alt="AMEN BANK Logo" class="brand-logo" />
+          <img src="/ammenlogo.png" alt="AMEN BANK Logo" class="brand-logo" />
           <span>AMMEN BANK</span>
         </div>
         <p>Prendre de l'avance, en toute sérénité et sécurité.</p>

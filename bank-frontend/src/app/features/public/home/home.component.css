@@ -315,6 +315,32 @@
   font-size: 20px;
 }
 
+.live-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary-green);
+  animation: live-pulse 1s infinite ease-in-out;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.simulator-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  color: #dc2626;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
 .simulator-field {
   margin-bottom: 22px;
 }

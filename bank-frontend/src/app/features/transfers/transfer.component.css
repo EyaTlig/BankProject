@@ -64,6 +64,31 @@
   margin: 0 0 20px;
 }
 
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.header-row h2 {
+  margin: 0;
+}
+
+.bulk-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4d7c0f;
+  text-decoration: none;
+}
+
+.bulk-link:hover {
+  text-decoration: underline;
+}
+
 label {
   font-size: 12px;
   font-weight: 600;

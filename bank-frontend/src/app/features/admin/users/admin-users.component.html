@@ -1,0 +1,108 @@
+<h1 class="page-title">Gestion des utilisateurs</h1>
+
+@if (error()) {
+  <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+}
+
+@if (loading()) {
+  <div class="loading-state">Chargement des utilisateurs...</div>
+} @else {
+
+  <div class="table-wrapper">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>Utilisateur</th>
+          <th>Email</th>
+          <th>Rôle</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (user of users(); track user.id) {
+          <tr [class.row-pending]="actionPendingId() === user.id">
+            <td class="user-name">{{ user.firstName }} {{ user.lastName }}</td>
+            <td class="user-email">{{ user.email }}</td>
+            <td>
+              <select
+                class="role-select"
+                [value]="user.role"
+                [disabled]="actionPendingId() === user.id"
+                (change)="onRoleSelect(user, $event)"
+              >
+                <option value="CLIENT">Client</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </td>
+            <td>
+              <button
+                class="status-toggle"
+                [class.enabled]="user.enabled"
+                [disabled]="actionPendingId() === user.id"
+                (click)="toggleStatus(user)"
+              >
+                <span class="toggle-dot"></span>
+                {{ user.enabled ? 'Actif' : 'Désactivé' }}
+              </button>
+            </td>
+            <td class="actions-cell">
+              <button
+                class="icon-btn"
+                title="Réinitialiser le mot de passe"
+                [disabled]="actionPendingId() === user.id"
+                (click)="resetPassword(user)"
+              >
+                <i class="ti ti-key"></i>
+              </button>
+              <button
+                class="icon-btn danger"
+                title="Supprimer l'utilisateur"
+                [disabled]="actionPendingId() === user.id"
+                (click)="askDeleteConfirmation(user.id)"
+              >
+                <i class="ti ti-trash"></i>
+              </button>
+            </td>
+          </tr>
+
+          @if (tempPasswordFor()?.id === user.id) {
+            <tr class="inline-panel-row">
+              <td colspan="5">
+                <div class="temp-password-panel">
+                  <i class="ti ti-circle-check"></i>
+                  <span>
+                    Mot de passe temporaire pour <strong>{{ user.email }}</strong> :
+                    <code>{{ tempPasswordFor()?.password }}</code>
+                  </span>
+                  <button class="close-btn" (click)="closeTempPassword()">
+                    <i class="ti ti-x"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+
+          @if (confirmDeleteId() === user.id) {
+            <tr class="inline-panel-row">
+              <td colspan="5">
+                <div class="confirm-delete-panel">
+                  <i class="ti ti-alert-triangle"></i>
+                  <span>Supprimer définitivement <strong>{{ user.email }}</strong> ?</span>
+                  <div class="confirm-actions">
+                    <button class="btn-cancel" (click)="cancelDelete()">Annuler</button>
+                    <button class="btn-confirm-danger" (click)="confirmDelete(user.id)">Supprimer</button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+
+    @if (users().length === 0) {
+      <div class="empty-state">Aucun utilisateur trouvé.</div>
+    }
+  </div>
+}

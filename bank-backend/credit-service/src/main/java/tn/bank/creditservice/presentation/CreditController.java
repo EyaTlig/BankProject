@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,7 +14,6 @@ import tn.bank.creditservice.application.CreditRequestResponse;
 import tn.bank.creditservice.application.CreditService;
 import tn.bank.creditservice.application.SimulationRequest;
 import tn.bank.creditservice.application.SimulationResponse;
-import tn.bank.creditservice.application.UpdateCreditStatusRequest;
 
 import java.util.List;
 
@@ -45,13 +42,5 @@ public class CreditController {
     @GetMapping("/requests/my")
     public ResponseEntity<List<CreditRequestResponse>> myRequests(Authentication authentication) {
         return ResponseEntity.ok(creditService.getMyCreditRequests(authentication.getName()));
-    }
-
-    @PatchMapping("/requests/{id}/status")
-    public ResponseEntity<CreditRequestResponse> updateStatus(
-            @PathVariable Long id,
-            @Valid @RequestBody UpdateCreditStatusRequest request
-    ) {
-        return ResponseEntity.ok(creditService.updateStatus(id, request));
     }
 }

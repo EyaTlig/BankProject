@@ -13,7 +13,7 @@ import {AuthService} from '../../core/services/auth.service';
 export class LayoutComponent {
 
   constructor(
-    private authService: AuthService,
+    public authService: AuthService,
     private router: Router
   ) {}
 
