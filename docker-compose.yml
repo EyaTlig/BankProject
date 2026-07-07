@@ -93,6 +93,83 @@ services:
     networks:
       - bank-network
 
+  auth-service:
+    build:
+      context: ./bank-backend/auth-service
+    container_name: auth-service
+    restart: always
+    depends_on:
+      - mysql-auth
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-auth:3306/auth_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    ports:
+      - "8081:8081"
+    networks:
+      - bank-network
+
+  account-service:
+    build:
+      context: ./bank-backend/account-service
+    container_name: account-service
+    restart: always
+    depends_on:
+      - mysql-account
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-account:3306/account_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    ports:
+      - "8082:8082"
+    networks:
+      - bank-network
+
+  credit-service:
+    build:
+      context: ./bank-backend/credit-service
+    container_name: credit-service
+    restart: always
+    depends_on:
+      - mysql-credit
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-credit:3306/credit_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    ports:
+      - "8083:8083"
+    networks:
+      - bank-network
+
+  chatbot-service:
+    build:
+      context: ./bank-backend/chatbot-service
+    container_name: chatbot-service
+    restart: always
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+      ALLOWED_ORIGINS: http://localhost:4200
+    ports:
+      - "8084:8084"
+    networks:
+      - bank-network
+
+  frontend:
+    build:
+      context: ./bank-frontend
+    container_name: frontend
+    restart: always
+    depends_on:
+      - auth-service
+      - account-service
+      - credit-service
+      - chatbot-service
+    ports:
+      - "4200:80"
+    networks:
+      - bank-network
+
 networks:
   bank-network:
     driver: bridge
