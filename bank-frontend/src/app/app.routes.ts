@@ -18,6 +18,7 @@ import {AdminAuditLogsComponent} from './features/admin/audit-logs/admin-audit-l
 import {AdminCreditsComponent} from './features/admin/credits/admin-credits.component';
 import {AdminAccountsComponent} from './features/admin/accounts/admin-accounts.component';
 import {AdminTransactionsComponent} from './features/admin/transactions/admin-transactions.component';
+import {AdminSecurityAlertsComponent} from './features/admin/security-alerts/admin-security-alerts.component';
 import {BulkTransferComponent} from './features/bulk-transfers/bulk-transfer.component';
 
 export const routes: Routes = [
@@ -46,6 +47,7 @@ export const routes: Routes = [
           { path: 'audit-logs', component: AdminAuditLogsComponent },
           { path: 'accounts', component: AdminAccountsComponent },
           { path: 'transactions', component: AdminTransactionsComponent },
+          { path: 'security-alerts', component: AdminSecurityAlertsComponent },
           { path: 'credits', component: AdminCreditsComponent }
         ]
       }

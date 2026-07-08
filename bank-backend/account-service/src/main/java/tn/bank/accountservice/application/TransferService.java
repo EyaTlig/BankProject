@@ -27,6 +27,7 @@ public class TransferService {
     private final TransactionRepository transactionRepository;
     private final TransferRepository transferRepository;
     private final TransferOtpService transferOtpService;
+    private final TransactionAnomalyService transactionAnomalyService;
 
     public InitiateTransferResponse initiateTransfer(String email, InitiateTransferRequest request) {
 
@@ -150,6 +151,8 @@ public class TransferService {
 
         transactionRepository.save(debitTransaction);
         transactionRepository.save(creditTransaction);
+
+        transactionAnomalyService.checkOutgoingTransfer(sourceAccount, transfer.getAmount());
 
         transfer.setStatus(TransferStatus.CONFIRMED);
         transfer.setConfirmedAt(LocalDateTime.now());

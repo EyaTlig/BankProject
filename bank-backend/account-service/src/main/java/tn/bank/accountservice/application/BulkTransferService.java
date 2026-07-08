@@ -38,6 +38,7 @@ public class BulkTransferService {
     private final TransactionRepository transactionRepository;
     private final BulkTransferRepository bulkTransferRepository;
     private final TransferOtpService transferOtpService;
+    private final TransactionAnomalyService transactionAnomalyService;
 
     public InitiateBulkTransferResponse initiateBulkTransfer(String email, Long sourceAccountId, MultipartFile csvFile) {
 
@@ -166,6 +167,8 @@ public class BulkTransferService {
 
                 transactionRepository.save(debitTransaction);
                 transactionRepository.save(creditTransaction);
+
+                transactionAnomalyService.checkOutgoingTransfer(sourceAccount, item.getAmount());
 
                 item.setStatus(BulkTransferItemStatus.SUCCESS);
                 successCount++;

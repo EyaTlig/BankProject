@@ -1,0 +1,58 @@
+<div class="security-alerts-page">
+  <div class="page-header">
+    <div>
+      <h1>Alertes de sécurité</h1>
+      <p class="subtitle">Détection automatique des comportements suspects (connexions, virements)</p>
+    </div>
+    @if (unresolvedCount() > 0) {
+      <span class="unresolved-badge">{{ unresolvedCount() }} non résolue(s)</span>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="state-message">Chargement des alertes...</div>
+  } @else if (error()) {
+    <div class="state-message error">{{ error() }}</div>
+  } @else if (alerts().length === 0) {
+    <div class="state-message">Aucune alerte détectée pour le moment. Tout va bien 👍</div>
+  } @else {
+    <div class="alerts-list">
+      @for (alert of alerts(); track alert.source + '-' + alert.id) {
+        <div class="alert-card" [class.resolved]="alert.resolved" [class]="'severity-' + alert.severity.toLowerCase()">
+          <div class="alert-main">
+            <div class="alert-top-row">
+              <span class="severity-badge" [class]="'severity-' + alert.severity.toLowerCase()">
+                {{ alert.severity }}
+              </span>
+              <span class="type-label">{{ typeLabel(alert.type) }}</span>
+              <span class="source-tag">{{ alert.source === 'auth' ? 'Connexion' : 'Transaction' }}</span>
+              @if (alert.resolved) {
+                <span class="resolved-tag">Résolue</span>
+              }
+            </div>
+            <p class="alert-message">{{ alert.message }}</p>
+            <div class="alert-meta">
+              @if (alert.relatedEmail) {
+                <span>{{ alert.relatedEmail }}</span>
+              }
+              @if (alert.relatedAccountNumber) {
+                <span>Compte {{ alert.relatedAccountNumber }}</span>
+              }
+              <span>{{ alert.createdAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          </div>
+
+          @if (!alert.resolved) {
+            <button
+              class="resolve-button"
+              (click)="resolve(alert)"
+              [disabled]="resolvingId() === alert.id"
+            >
+              {{ resolvingId() === alert.id ? '...' : 'Marquer résolue' }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

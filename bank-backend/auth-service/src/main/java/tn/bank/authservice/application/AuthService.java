@@ -1,8 +1,11 @@
 package tn.bank.authservice.application;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import tn.bank.authservice.domain.Role;
 import tn.bank.authservice.domain.User;
 import tn.bank.authservice.infrastructure.JwtService;
@@ -21,6 +24,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final OtpService otpService;
     private final UserEventPublisher userEventPublisher;
+    private final SecurityMonitoringService securityMonitoringService;
 
     public RegisterResponse register(RegisterRequest request) {
 
@@ -58,12 +62,17 @@ public class AuthService {
 
     public LoginResponse login(LoginRequest request) {
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("Email ou mot de passe incorrect"));
+        String ipAddress = currentClientIp();
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElse(null);
+
+        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            securityMonitoringService.recordLoginAttempt(request.getEmail(), false, ipAddress);
             throw new IllegalArgumentException("Email ou mot de passe incorrect");
         }
+
+        securityMonitoringService.recordLoginAttempt(request.getEmail(), true, ipAddress);
 
         String otpCode = otpService.generateOtp();
         user.setOtpCode(otpCode);
@@ -78,6 +87,20 @@ public class AuthService {
                 "Un code de vérification a été envoyé par email",
                 true
         );
+    }
+
+    private String currentClientIp() {
+        try {
+            HttpServletRequest httpRequest = ((ServletRequestAttributes)
+                    RequestContextHolder.currentRequestAttributes()).getRequest();
+            String forwardedFor = httpRequest.getHeader("X-Forwarded-For");
+            if (forwardedFor != null && !forwardedFor.isBlank()) {
+                return forwardedFor.split(",")[0].trim();
+            }
+            return httpRequest.getRemoteAddr();
+        } catch (Exception e) {
+            return "unknown";
+        }
     }
 
     public LoginResponse verifyOtp(VerifyOtpRequest request) {
