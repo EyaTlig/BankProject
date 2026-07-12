@@ -75,4 +75,25 @@
   </main>
 </div>
 
+@if (idleTimeoutService.showWarning()) {
+  <div class="idle-modal-overlay">
+    <div class="idle-modal-panel">
+      <i class="ti ti-clock-exclamation idle-modal-icon"></i>
+      <h2>Toujours là ?</h2>
+      <p>
+        Par mesure de sécurité, votre session va être fermée dans
+        <strong>{{ idleTimeoutService.secondsRemaining() }}s</strong> en raison d'une inactivité prolongée.
+      </p>
+      <div class="idle-modal-actions">
+        <button class="btn-stay" (click)="idleTimeoutService.stayLoggedIn()">
+          Rester connecté
+        </button>
+        <button class="btn-logout-now" (click)="logout()">
+          Se déconnecter maintenant
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
 <app-chatbot-widget></app-chatbot-widget>

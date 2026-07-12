@@ -21,6 +21,7 @@ export class RecurringTransferComponent implements OnInit {
   showForm = false;
   formLoading = false;
   errorMessage: string | null = null;
+  editingId: number | null = null;
 
   form: FormGroup;
 
@@ -72,12 +73,38 @@ export class RecurringTransferComponent implements OnInit {
   }
 
   openForm(): void {
+    this.editingId = null;
     this.showForm = true;
     this.errorMessage = null;
+    this.form.get('sourceAccountId')?.enable();
+    this.form.get('startDate')?.enable();
+  }
+
+  openEditForm(transfer: RecurringTransferResponse): void {
+    this.editingId = transfer.id;
+    this.errorMessage = null;
+
+    this.form.patchValue({
+      destinationAccountNumber: transfer.destinationAccountNumber,
+      amount: transfer.amount,
+      label: transfer.label || '',
+      frequency: transfer.frequency,
+      startDate: transfer.startDate,
+      endDate: transfer.endDate || ''
+    });
+
+    // La date de début et le compte source ne sont pas modifiables une fois le virement créé.
+    this.form.get('sourceAccountId')?.disable();
+    this.form.get('startDate')?.disable();
+
+    this.showForm = true;
   }
 
   closeForm(): void {
     this.showForm = false;
+    this.editingId = null;
+    this.form.get('sourceAccountId')?.enable();
+    this.form.get('startDate')?.enable();
     this.form.reset({ frequency: 'MONTHLY', sourceAccountId: this.accounts[0]?.id });
   }
 
@@ -90,7 +117,36 @@ export class RecurringTransferComponent implements OnInit {
     this.formLoading = true;
     this.errorMessage = null;
 
-    const value = this.form.value;
+    const value = this.form.getRawValue();
+
+    if (this.editingId !== null) {
+      const updateRequest = {
+        destinationAccountNumber: value.destinationAccountNumber,
+        amount: Number(value.amount),
+        label: value.label || undefined,
+        frequency: value.frequency,
+        endDate: value.endDate || undefined
+      };
+
+      this.recurringTransferService.updateRecurringTransfer(this.editingId, updateRequest).subscribe({
+        next: (updated) => {
+          this.formLoading = false;
+          const index = this.recurringTransfers.findIndex(t => t.id === updated.id);
+          if (index !== -1) {
+            this.recurringTransfers[index] = updated;
+          }
+          this.closeForm();
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.formLoading = false;
+          this.errorMessage = err.error?.message || 'Une erreur est survenue.';
+          this.cdr.detectChanges();
+        }
+      });
+      return;
+    }
+
     const request = {
       sourceAccountId: Number(value.sourceAccountId),
       destinationAccountNumber: value.destinationAccountNumber,

@@ -1,7 +1,8 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive, NavigationStart } from '@angular/router';
 import {AuthService} from '../../core/services/auth.service';
+import {IdleTimeoutService} from '../../core/services/idle-timeout.service';
 import { ChatbotWidgetComponent } from '../chatbot/chatbot-widget.component';
 
 @Component({
@@ -11,12 +12,13 @@ import { ChatbotWidgetComponent } from '../chatbot/chatbot-widget.component';
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.css'
 })
-export class LayoutComponent {
+export class LayoutComponent implements OnInit, OnDestroy {
 
   mobileNavOpen = signal(false);
 
   constructor(
     public authService: AuthService,
+    public idleTimeoutService: IdleTimeoutService,
     private router: Router
   ) {
     this.router.events.subscribe(event => {
@@ -24,6 +26,14 @@ export class LayoutComponent {
         this.mobileNavOpen.set(false);
       }
     });
+  }
+
+  ngOnInit(): void {
+    this.idleTimeoutService.start();
+  }
+
+  ngOnDestroy(): void {
+    this.idleTimeoutService.stop();
   }
 
   toggleMobileNav(): void {
@@ -35,6 +45,7 @@ export class LayoutComponent {
   }
 
   logout(): void {
+    this.idleTimeoutService.stop();
     this.authService.logout();
     this.router.navigate(['/login']);
   }

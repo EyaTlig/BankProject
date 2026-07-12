@@ -148,7 +148,8 @@
   color: #1B6FB8;
 }
 
-.cancel-button {
+.cancel-button,
+.edit-button {
   background: none;
   border: none;
   color: #94a3b8;
@@ -160,6 +161,24 @@
 .cancel-button:hover {
   background: #fef2f2;
   color: #dc2626;
+}
+
+.edit-button:hover {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.field-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
 }
 
 .modal-overlay {

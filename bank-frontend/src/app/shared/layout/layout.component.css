@@ -202,3 +202,75 @@
     padding: 16px 12px;
   }
 }
+
+.idle-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.idle-modal-panel {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 380px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+}
+
+.idle-modal-icon {
+  font-size: 40px;
+  color: #d97706;
+  margin-bottom: 12px;
+}
+
+.idle-modal-panel h2 {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  color: #0f172a;
+}
+
+.idle-modal-panel p {
+  margin: 0 0 24px;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.idle-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-stay {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-stay:hover {
+  background: #1d4ed8;
+}
+
+.btn-logout-now {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.btn-logout-now:hover {
+  color: #dc2626;
+}

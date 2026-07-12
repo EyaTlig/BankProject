@@ -43,6 +43,9 @@
       </span>
 
       @if (transfer.status === 'ACTIVE') {
+        <button class="edit-button" (click)="openEditForm(transfer)" title="Modifier">
+          <i class="ti ti-pencil"></i>
+        </button>
         <button class="cancel-button" (click)="cancelTransfer(transfer.id)" title="Annuler">
           <i class="ti ti-trash"></i>
         </button>
@@ -56,20 +59,24 @@
     <div class="modal-panel" (click)="$event.stopPropagation()">
 
       <div class="modal-header">
-        <h2>Nouveau virement permanent</h2>
+        <h2>{{ editingId !== null ? 'Modifier le virement permanent' : 'Nouveau virement permanent' }}</h2>
         <i class="ti ti-x" (click)="closeForm()"></i>
       </div>
 
       <form [formGroup]="form" (ngSubmit)="submitForm()">
 
-        <label>Compte source</label>
-        <select formControlName="sourceAccountId">
-          @for (account of accounts; track account.id) {
-            <option [value]="account.id">
-              {{ account.type === 'COURANT' ? 'Compte courant' : 'Compte épargne' }} — {{ account.balance | number:'1.3-3' }} DT
-            </option>
-          }
-        </select>
+        @if (editingId === null) {
+          <label>Compte source</label>
+          <select formControlName="sourceAccountId">
+            @for (account of accounts; track account.id) {
+              <option [value]="account.id">
+                {{ account.type === 'COURANT' ? 'Compte courant' : 'Compte épargne' }} — {{ account.balance | number:'1.3-3' }} DT
+              </option>
+            }
+          </select>
+        } @else {
+          <p class="field-note"><i class="ti ti-lock"></i> Le compte source et la date de début ne sont pas modifiables.</p>
+        }
 
         <label>Compte destinataire (RIB)</label>
         <input type="text" formControlName="destinationAccountNumber" placeholder="07 807 XXXXXXXXXXXXX XX" class="mono" />
@@ -91,10 +98,12 @@
         </div>
 
         <div class="form-row">
-          <div class="form-col">
-            <label>Date de début</label>
-            <input type="date" formControlName="startDate" />
-          </div>
+          @if (editingId === null) {
+            <div class="form-col">
+              <label>Date de début</label>
+              <input type="date" formControlName="startDate" />
+            </div>
+          }
           <div class="form-col">
             <label>Date de fin (optionnel)</label>
             <input type="date" formControlName="endDate" />
@@ -109,8 +118,11 @@
         }
 
         <button type="submit" class="btn-submit" [disabled]="formLoading">
-          @if (formLoading) { <span class="spinner"></span> Création... }
-          @else { Programmer le virement }
+          @if (formLoading) {
+            <span class="spinner"></span> {{ editingId !== null ? 'Enregistrement...' : 'Création...' }}
+          } @else {
+            {{ editingId !== null ? 'Enregistrer les modifications' : 'Programmer le virement' }}
+          }
         </button>
       </form>
     </div>

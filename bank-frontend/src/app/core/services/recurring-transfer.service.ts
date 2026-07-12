@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   CreateRecurringTransferRequest,
+  UpdateRecurringTransferRequest,
   RecurringTransferResponse
 } from '../models/recurring-transfer.model';
 
@@ -19,6 +20,10 @@ export class RecurringTransferService {
 
   createRecurringTransfer(request: CreateRecurringTransferRequest): Observable<RecurringTransferResponse> {
     return this.http.post<RecurringTransferResponse>(this.baseUrl, request);
+  }
+
+  updateRecurringTransfer(id: number, request: UpdateRecurringTransferRequest): Observable<RecurringTransferResponse> {
+    return this.http.put<RecurringTransferResponse>(`${this.baseUrl}/${id}`, request);
   }
 
   cancelRecurringTransfer(id: number): Observable<RecurringTransferResponse> {

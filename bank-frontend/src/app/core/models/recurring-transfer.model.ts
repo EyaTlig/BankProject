@@ -11,6 +11,14 @@ export interface CreateRecurringTransferRequest {
   endDate?: string;
 }
 
+export interface UpdateRecurringTransferRequest {
+  destinationAccountNumber: string;
+  amount: number;
+  label?: string;
+  frequency: RecurringFrequency;
+  endDate?: string;
+}
+
 export interface RecurringTransferResponse {
   id: number;
   destinationAccountNumber: string;
