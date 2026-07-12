@@ -2,6 +2,7 @@ package tn.bank.creditservice.presentation;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,11 +22,13 @@ public class AdminCreditController {
 
     private final CreditService creditService;
 
+    @PreAuthorize("hasAuthority('PERM_CREDITS_VIEW')")
     @GetMapping("/requests")
     public ResponseEntity<List<CreditRequestResponse>> getAllRequests() {
         return ResponseEntity.ok(creditService.getAllCreditRequests());
     }
 
+    @PreAuthorize("hasAuthority('PERM_CREDITS_VALIDATE')")
     @PatchMapping("/requests/{id}/status")
     public ResponseEntity<CreditRequestResponse> updateStatus(
             @PathVariable Long id,

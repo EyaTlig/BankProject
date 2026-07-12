@@ -4,8 +4,10 @@ import { Observable } from 'rxjs';
 import {
   AdminUserResponse,
   CreateClientRequest,
+  CreateEmployeeRequest,
   UpdateUserStatusRequest,
   UpdateUserRoleRequest,
+  UpdatePermissionsRequest,
   ResetPasswordResponse,
   AuditLogEntry
 } from '../models/admin-user.model';
@@ -26,12 +28,20 @@ export class AdminUserService {
     return this.http.post<AdminUserResponse>(this.baseUrl, request);
   }
 
+  createEmployee(request: CreateEmployeeRequest): Observable<AdminUserResponse> {
+    return this.http.post<AdminUserResponse>(`${this.adminBaseUrl}/employees`, request);
+  }
+
   updateStatus(id: number, request: UpdateUserStatusRequest): Observable<AdminUserResponse> {
     return this.http.patch<AdminUserResponse>(`${this.baseUrl}/${id}/status`, request);
   }
 
   updateRole(id: number, request: UpdateUserRoleRequest): Observable<AdminUserResponse> {
     return this.http.patch<AdminUserResponse>(`${this.baseUrl}/${id}/role`, request);
+  }
+
+  updatePermissions(id: number, request: UpdatePermissionsRequest): Observable<AdminUserResponse> {
+    return this.http.patch<AdminUserResponse>(`${this.baseUrl}/${id}/permissions`, request);
   }
 
   deleteUser(id: number): Observable<void> {

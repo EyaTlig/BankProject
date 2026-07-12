@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tn.bank.authservice.domain.AdminPermission;
 import tn.bank.authservice.domain.AuditLog;
 import tn.bank.authservice.domain.Role;
 import tn.bank.authservice.domain.User;
@@ -60,6 +61,35 @@ public class AdminService {
         return toResponse(savedUser);
     }
 
+    @Transactional
+    public AdminUserResponse createEmployee(AdminCreateEmployeeRequest request, String performedBy) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Un compte existe déjà avec cet email");
+        }
+
+        String tempPassword = UUID.randomUUID().toString().substring(0, 8);
+
+        User user = User.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(tempPassword))
+                .role(Role.ADMIN)
+                .enabled(true)
+                .permissions(request.getPermissions() != null ? request.getPermissions() : java.util.Set.of())
+                .build();
+
+        // Contrairement a un client, un employe n'a pas de compte bancaire :
+        // on ne publie pas UserCreatedEvent, account-service n'a rien a creer ici.
+        User savedUser = userRepository.save(user);
+
+        otpService.sendEmployeeAccountCreatedEmail(savedUser.getEmail(), savedUser.getFirstName(), tempPassword);
+
+        logAction("CREATION_EMPLOYE", savedUser.getEmail(), performedBy, request.getPermissions() != null ? request.getPermissions().toString() : "[]");
+
+        return toResponse(savedUser);
+    }
+
     public List<AdminUserResponse> getAllUsers() {
         return userRepository.findAll().stream()
                 .map(this::toResponse)
@@ -95,6 +125,15 @@ public class AdminService {
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
         String previousRole = user.getRole().name();
         user.setRole(request.getRole());
+
+        if (request.getRole() == Role.ADMIN && previousRole.equals(Role.CLIENT.name())) {
+            // Par defaut, un nouvel admin recoit toutes les permissions ;
+            // elles peuvent ensuite etre restreintes via updatePermissions
+            user.setPermissions(new java.util.HashSet<>(java.util.List.of(AdminPermission.values())));
+        } else if (request.getRole() == Role.CLIENT) {
+            user.setPermissions(new java.util.HashSet<>());
+        }
+
         User saved = userRepository.save(user);
 
         logAction(
@@ -102,6 +141,28 @@ public class AdminService {
                 saved.getEmail(),
                 performedBy,
                 previousRole + " -> " + request.getRole()
+        );
+
+        return toResponse(saved);
+    }
+
+    @Transactional
+    public AdminUserResponse updatePermissions(Long id, UpdatePermissionsRequest request, String performedBy) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
+
+        if (user.getRole() != Role.ADMIN) {
+            throw new IllegalArgumentException("Les permissions ne s'appliquent qu'aux comptes administrateurs");
+        }
+
+        user.setPermissions(new java.util.HashSet<>(request.getPermissions()));
+        User saved = userRepository.save(user);
+
+        logAction(
+                "MODIFICATION_PERMISSIONS",
+                saved.getEmail(),
+                performedBy,
+                request.getPermissions().toString()
         );
 
         return toResponse(saved);
@@ -162,7 +223,8 @@ public class AdminService {
                 user.getFirstName(),
                 user.getLastName(),
                 user.getRole(),
-                user.isEnabled()
+                user.isEnabled(),
+                user.getPermissions()
         );
     }
 }

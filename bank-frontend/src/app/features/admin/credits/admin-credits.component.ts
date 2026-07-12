@@ -2,6 +2,7 @@ import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdminCreditService } from '../../../core/services/admin-credit.service';
 import { CreditRequestResponse, CreditType } from '../../../core/models/credit.model';
+import { AuthService } from '../../../core/services/auth.service';
 
 type FilterTab = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL';
 
@@ -32,7 +33,10 @@ export class AdminCreditsComponent implements OnInit {
 
   pendingCount = computed(() => this.requests().filter(r => r.status === 'PENDING').length);
 
-  constructor(private adminCreditService: AdminCreditService) {}
+  constructor(
+    private adminCreditService: AdminCreditService,
+    public authService: AuthService
+  ) {}
 
   ngOnInit(): void {
     this.loadRequests();

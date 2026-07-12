@@ -23,13 +23,14 @@ public class JwtService {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
-    public String generateToken(String email, String role) {
+    public String generateToken(String email, String role, java.util.Set<String> permissions) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
                 .subject(email)
                 .claim("role", role)
+                .claim("permissions", String.join(",", permissions))
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey())
@@ -43,6 +44,14 @@ public class JwtService {
     public String extractRole(String token) {
         Object role = extractClaim(token, claims -> claims.get("role"));
         return role != null ? role.toString() : null;
+    }
+
+    public java.util.List<String> extractPermissions(String token) {
+        Object permissions = extractClaim(token, claims -> claims.get("permissions"));
+        if (permissions == null || permissions.toString().isBlank()) {
+            return java.util.List.of();
+        }
+        return java.util.Arrays.asList(permissions.toString().split(","));
     }
 
     public boolean isTokenValid(String token, String email) {

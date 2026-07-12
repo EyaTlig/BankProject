@@ -59,6 +59,23 @@ export class AuthService {
     }
   }
 
+  getPermissions(): string[] {
+    const token = this.getToken();
+    if (!token) return [];
+    try {
+      const payload = token.split('.')[1];
+      const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+      const permissions: string = decoded.permissions ?? '';
+      return permissions.length > 0 ? permissions.split(',') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  hasPermission(permission: string): boolean {
+    return this.getPermissions().includes(permission);
+  }
+
   isAdmin(): boolean {
     return this.getRole() === 'ADMIN';
   }

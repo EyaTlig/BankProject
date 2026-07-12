@@ -1,8 +1,10 @@
 <div class="page-header">
   <h1 class="page-title">Gestion des utilisateurs</h1>
-  <button class="btn-primary" (click)="openCreateForm()">
-    <i class="ti ti-user-plus"></i> Nouveau client
-  </button>
+  @if (authService.hasPermission('USERS_MANAGE')) {
+    <button class="btn-primary" (click)="openCreateForm()">
+      <i class="ti ti-user-plus"></i> Nouveau compte
+    </button>
+  }
 </div>
 
 @if (error()) {
@@ -15,40 +17,111 @@
 
 @if (showCreateForm()) {
   <div class="create-form-panel">
-    <h2 class="create-form-title">Créer un nouveau client</h2>
+    <h2 class="create-form-title">Créer un nouveau compte</h2>
+
+    <div class="mode-tabs">
+      <button type="button" class="mode-tab" [class.active]="createMode() === 'client'" (click)="setCreateMode('client')">
+        <i class="ti ti-user"></i> Client
+      </button>
+      <button type="button" class="mode-tab" [class.active]="createMode() === 'employee'" (click)="setCreateMode('employee')">
+        <i class="ti ti-user-shield"></i> Employé (admin)
+      </button>
+    </div>
 
     @if (createError()) {
       <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ createError() }}</div>
     }
 
-    <form (ngSubmit)="submitCreateClient()">
-      <div class="form-grid">
-        <div class="field">
-          <label for="newFirstName">Prénom</label>
-          <input id="newFirstName" type="text" name="firstName" [(ngModel)]="newClient.firstName" placeholder="Mohamed" [disabled]="creating()" />
-        </div>
-        <div class="field">
-          <label for="newLastName">Nom</label>
-          <input id="newLastName" type="text" name="lastName" [(ngModel)]="newClient.lastName" placeholder="Ben Salah" [disabled]="creating()" />
-        </div>
-        <div class="field field-wide">
-          <label for="newEmail">Email</label>
-          <input id="newEmail" type="email" name="email" [(ngModel)]="newClient.email" placeholder="client@email.com" [disabled]="creating()" />
-        </div>
-      </div>
+    @if (createMode() === 'client') {
 
-      <p class="form-hint">
-        <i class="ti ti-info-circle"></i>
-        Un mot de passe temporaire sera généré et envoyé par email au client, avec un compte courant créé automatiquement.
-      </p>
+      <form (ngSubmit)="submitCreateClient()">
+        <div class="form-grid">
+          <div class="field">
+            <label for="newFirstName">Prénom</label>
+            <input id="newFirstName" type="text" name="firstName" [(ngModel)]="newClient.firstName" placeholder="Mohamed" [disabled]="creating()" />
+          </div>
+          <div class="field">
+            <label for="newLastName">Nom</label>
+            <input id="newLastName" type="text" name="lastName" [(ngModel)]="newClient.lastName" placeholder="Ben Salah" [disabled]="creating()" />
+          </div>
+          <div class="field field-wide">
+            <label for="newEmail">Email</label>
+            <input id="newEmail" type="email" name="email" [(ngModel)]="newClient.email" placeholder="client@email.com" [disabled]="creating()" />
+          </div>
+        </div>
 
-      <div class="form-actions">
-        <button type="button" class="btn-cancel" (click)="cancelCreate()" [disabled]="creating()">Annuler</button>
-        <button type="submit" class="btn-primary" [disabled]="creating()">
-          {{ creating() ? 'Création...' : 'Créer le client' }}
-        </button>
-      </div>
-    </form>
+        <p class="form-hint">
+          <i class="ti ti-info-circle"></i>
+          Un mot de passe temporaire sera généré et envoyé par email au client, avec un compte courant créé automatiquement.
+        </p>
+
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" (click)="cancelCreate()" [disabled]="creating()">Annuler</button>
+          <button type="submit" class="btn-primary" [disabled]="creating()">
+            {{ creating() ? 'Création...' : 'Créer le client' }}
+          </button>
+        </div>
+      </form>
+
+    } @else {
+
+      <form (ngSubmit)="submitCreateEmployee()">
+        <div class="form-grid">
+          <div class="field">
+            <label for="empFirstName">Prénom</label>
+            <input id="empFirstName" type="text" name="empFirstName" [(ngModel)]="newEmployee.firstName" placeholder="Sami" [disabled]="creating()" />
+          </div>
+          <div class="field">
+            <label for="empLastName">Nom</label>
+            <input id="empLastName" type="text" name="empLastName" [(ngModel)]="newEmployee.lastName" placeholder="Trabelsi" [disabled]="creating()" />
+          </div>
+          <div class="field field-wide">
+            <label for="empEmail">Email</label>
+            <input id="empEmail" type="email" name="empEmail" [(ngModel)]="newEmployee.email" placeholder="employe@banque.tn" [disabled]="creating()" />
+          </div>
+        </div>
+
+        <label class="permissions-label">Droits d'accès</label>
+        <div class="permissions-grid">
+          @for (module of permissionModules; track module.label) {
+            <div class="permission-module">
+              <span class="permission-module-label">{{ module.label }}</span>
+              <label class="permission-checkbox">
+                <input
+                  type="checkbox"
+                  [checked]="isNewEmployeePermissionChecked(module.viewPermission)"
+                  (change)="toggleNewEmployeePermission(module.viewPermission)"
+                  [disabled]="creating()"
+                />
+                Consultation
+              </label>
+              <label class="permission-checkbox">
+                <input
+                  type="checkbox"
+                  [checked]="isNewEmployeePermissionChecked(module.actionPermission)"
+                  (change)="toggleNewEmployeePermission(module.actionPermission)"
+                  [disabled]="creating()"
+                />
+                {{ module.actionLabel }}
+              </label>
+            </div>
+          }
+        </div>
+
+        <p class="form-hint">
+          <i class="ti ti-info-circle"></i>
+          Aucune permission cochée = l'employé pourra se connecter au panneau admin mais n'aura accès à aucun module (ajustable plus tard).
+        </p>
+
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" (click)="cancelCreate()" [disabled]="creating()">Annuler</button>
+          <button type="submit" class="btn-primary" [disabled]="creating()">
+            {{ creating() ? 'Création...' : "Créer l'employé" }}
+          </button>
+        </div>
+      </form>
+
+    }
   </div>
 }
 
@@ -76,7 +149,7 @@
               <select
                 class="role-select"
                 [value]="user.role"
-                [disabled]="actionPendingId() === user.id"
+                [disabled]="actionPendingId() === user.id || !authService.hasPermission('USERS_MANAGE')"
                 (change)="onRoleSelect(user, $event)"
               >
                 <option value="CLIENT">Client</option>
@@ -87,7 +160,7 @@
               <button
                 class="status-toggle"
                 [class.enabled]="user.enabled"
-                [disabled]="actionPendingId() === user.id"
+                [disabled]="actionPendingId() === user.id || !authService.hasPermission('USERS_MANAGE')"
                 (click)="toggleStatus(user)"
               >
                 <span class="toggle-dot"></span>
@@ -95,10 +168,20 @@
               </button>
             </td>
             <td class="actions-cell">
+              @if (user.role === 'ADMIN' && authService.hasPermission('USERS_MANAGE')) {
+                <button
+                  class="icon-btn"
+                  title="Gérer les permissions"
+                  [disabled]="actionPendingId() === user.id"
+                  (click)="openPermissionsPanel(user)"
+                >
+                  <i class="ti ti-adjustments"></i>
+                </button>
+              }
               <button
                 class="icon-btn"
                 title="Réinitialiser le mot de passe"
-                [disabled]="actionPendingId() === user.id"
+                [disabled]="actionPendingId() === user.id || !authService.hasPermission('USERS_MANAGE')"
                 (click)="resetPassword(user)"
               >
                 <i class="ti ti-key"></i>
@@ -106,13 +189,61 @@
               <button
                 class="icon-btn danger"
                 title="Supprimer l'utilisateur"
-                [disabled]="actionPendingId() === user.id"
+                [disabled]="actionPendingId() === user.id || !authService.hasPermission('USERS_MANAGE')"
                 (click)="askDeleteConfirmation(user.id)"
               >
                 <i class="ti ti-trash"></i>
               </button>
             </td>
           </tr>
+
+          @if (permissionsPanelId() === user.id) {
+            <tr class="inline-panel-row">
+              <td colspan="5">
+                <div class="permissions-panel">
+                  <p class="permissions-title">
+                    <i class="ti ti-adjustments"></i>
+                    Permissions de <strong>{{ user.firstName }} {{ user.lastName }}</strong>
+                  </p>
+
+                  @if (permissionsError()) {
+                    <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ permissionsError() }}</div>
+                  }
+
+                  <div class="permissions-grid">
+                    @for (module of permissionModules; track module.label) {
+                      <div class="permission-module">
+                        <span class="permission-module-label">{{ module.label }}</span>
+                        <label class="permission-checkbox">
+                          <input
+                            type="checkbox"
+                            [checked]="isPermissionChecked(module.viewPermission)"
+                            (change)="togglePermission(module.viewPermission)"
+                          />
+                          Consultation
+                        </label>
+                        <label class="permission-checkbox">
+                          <input
+                            type="checkbox"
+                            [checked]="isPermissionChecked(module.actionPermission)"
+                            (change)="togglePermission(module.actionPermission)"
+                          />
+                          {{ module.actionLabel }}
+                        </label>
+                      </div>
+                    }
+                  </div>
+
+                  <div class="confirm-actions">
+                    <button class="btn-cancel" (click)="closePermissionsPanel()" [disabled]="savingPermissions()">Annuler</button>
+                    <button class="btn-primary" (click)="savePermissions(user)" [disabled]="savingPermissions()">
+                      {{ savingPermissions() ? 'Enregistrement...' : 'Enregistrer' }}
+                    </button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          }
 
           @if (resetPasswordSuccessFor() === user.id) {
             <tr class="inline-panel-row">
