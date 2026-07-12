@@ -10,6 +10,8 @@
   gap: 8px;
   margin-bottom: 20px;
   border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
+  white-space: nowrap;
 }
 
 .filter-tab {
@@ -268,4 +270,28 @@
 .btn-confirm-danger:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-width: 560px) {
+  .request-header {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .request-actions {
+    flex-direction: column;
+  }
+
+  .btn-approve, .btn-reject {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .reject-actions {
+    flex-direction: column-reverse;
+  }
+
+  .reject-actions button {
+    width: 100%;
+  }
 }

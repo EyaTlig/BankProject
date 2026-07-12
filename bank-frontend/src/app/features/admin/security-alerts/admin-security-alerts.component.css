@@ -175,3 +175,18 @@
   background: var(--color-text-muted);
   cursor: not-allowed;
 }
+
+@media (max-width: 560px) {
+  .alert-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .resolve-button {
+    width: 100%;
+  }
+
+  .unresolved-badge {
+    align-self: flex-start;
+  }
+}

@@ -1,5 +1,16 @@
 import { TransferStatus } from './transfer.model';
 
+export interface ManualBulkTransferItem {
+  destinationAccountNumber: string;
+  amount: number | null;
+  label: string;
+}
+
+export interface InitiateManualBulkTransferRequest {
+  sourceAccountId: number;
+  items: { destinationAccountNumber: string; amount: number; label: string | null }[];
+}
+
 export interface InitiateBulkTransferResponse {
   bulkTransferId: number;
   totalItems: number;

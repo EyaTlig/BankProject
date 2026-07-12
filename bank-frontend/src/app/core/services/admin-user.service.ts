@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   AdminUserResponse,
+  CreateClientRequest,
   UpdateUserStatusRequest,
   UpdateUserRoleRequest,
   ResetPasswordResponse,
@@ -19,6 +20,10 @@ export class AdminUserService {
 
   getAllUsers(): Observable<AdminUserResponse[]> {
     return this.http.get<AdminUserResponse[]>(this.baseUrl);
+  }
+
+  createClient(request: CreateClientRequest): Observable<AdminUserResponse> {
+    return this.http.post<AdminUserResponse>(this.baseUrl, request);
   }
 
   updateStatus(id: number, request: UpdateUserStatusRequest): Observable<AdminUserResponse> {

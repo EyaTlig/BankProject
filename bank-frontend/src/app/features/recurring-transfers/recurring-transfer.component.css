@@ -177,8 +177,10 @@
   border-radius: 16px;
   padding: 28px;
   width: 480px;
+  max-width: calc(100vw - 32px);
   max-height: 90vh;
   overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .modal-header {
@@ -289,4 +291,36 @@ input:focus, select:focus {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 700px) {
+  .transfer-row {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .transfer-amount-block {
+    text-align: left;
+  }
+}
+
+@media (max-width: 560px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .btn-new {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .modal-panel {
+    padding: 20px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }

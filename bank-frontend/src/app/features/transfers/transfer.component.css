@@ -288,3 +288,18 @@ input.input-error {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+@media (max-width: 560px) {
+  .transfer-card {
+    padding: 20px;
+  }
+
+  .header-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .otp-input {
+    letter-spacing: 6px;
+  }
+}

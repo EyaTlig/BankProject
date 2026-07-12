@@ -1,6 +1,20 @@
 <div class="app-shell">
 
-  <aside class="sidebar">
+  <header class="mobile-topbar">
+    <button class="hamburger-btn" (click)="toggleMobileNav()" aria-label="Ouvrir le menu">
+      <i class="ti ti-menu-2"></i>
+    </button>
+    <div class="mobile-brand">
+      <img src="/ammenlogo.png" alt="AMEN BANK Logo" class="brand-logo" />
+      <span>AMMEN BANK</span>
+    </div>
+  </header>
+
+  @if (mobileNavOpen()) {
+    <div class="sidebar-backdrop" (click)="closeMobileNav()"></div>
+  }
+
+  <aside class="sidebar" [class.sidebar-open]="mobileNavOpen()">
     <div class="nav-brand">
       <img src="/ammenlogo.png" alt="AMEN BANK Logo" class="brand-logo" />
       <span>AMMEN BANK</span>

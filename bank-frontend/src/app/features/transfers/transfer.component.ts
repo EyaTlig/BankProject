@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
@@ -17,27 +17,32 @@ type TransferStep = 'details' | 'confirmation';
 })
 export class TransferComponent implements OnInit {
 
-  step: TransferStep = 'details';
-  accounts: Account[] = [];
-  selectedAccount: Account | undefined;
-  transferId: number | null = null;
+  // Etat réactif en signals (compatible mode zoneless).
+  // Le rafraîchissement de la vue après chaque appel HTTP est
+  // assuré globalement par zoneless-refresh.interceptor.ts.
+  step = signal<TransferStep>('details');
+  accounts = signal<Account[]>([]);
+  selectedAccount = signal<Account | undefined>(undefined);
+  transferId = signal<number | null>(null);
 
   detailsForm: FormGroup;
   otpForm: FormGroup;
 
-  loading = false;
-  errorMessage: string | null = null;
-  successMessage: string | null = null;
+  loading = signal(false);
+  errorMessage = signal<string | null>(null);
+  successMessage = signal<string | null>(null);
 
   constructor(
     private fb: FormBuilder,
     private accountService: AccountService,
     private transferService: TransferService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {
     this.detailsForm = this.fb.group({
       sourceAccountId: ['', Validators.required],
-      destinationAccountNumber: ['', Validators.required],
+      // Un RIB valide fait exactement 20 chiffres (07 + 807 + 13 chiffres + clé 2 chiffres)
+      destinationAccountNumber: ['', [Validators.required, Validators.pattern(/^\d{20}$/)]],
       amount: ['', [Validators.required, Validators.min(0.01)]],
       label: ['']
     });
@@ -50,28 +55,33 @@ export class TransferComponent implements OnInit {
   ngOnInit(): void {
     this.accountService.getMyAccounts().subscribe({
       next: (accounts) => {
-        this.accounts = accounts;
+        this.accounts.set(accounts);
         if (accounts.length > 0) {
           this.detailsForm.patchValue({ sourceAccountId: accounts[0].id });
-          this.selectedAccount = accounts[0];
+          this.selectedAccount.set(accounts[0]);
         }
+        this.cdr.detectChanges();
       }
     });
   }
 
   onAccountChange(): void {
     const id = Number(this.detailsForm.value.sourceAccountId);
-    this.selectedAccount = this.accounts.find(a => a.id === id);
+    this.selectedAccount.set(this.accounts().find(a => a.id === id));
   }
 
   submitDetails(): void {
+    if (this.loading()) {
+      return; // évite le double-submit (double-clic, double ngSubmit)
+    }
+
     if (this.detailsForm.invalid) {
       this.detailsForm.markAllAsTouched();
       return;
     }
 
-    this.loading = true;
-    this.errorMessage = null;
+    this.loading.set(true);
+    this.errorMessage.set(null);
 
     const request = {
       sourceAccountId: Number(this.detailsForm.value.sourceAccountId),
@@ -82,48 +92,54 @@ export class TransferComponent implements OnInit {
 
     this.transferService.initiateTransfer(request).subscribe({
       next: (response) => {
-        console.log('=== DEBUG initiate next() appelé ===', response);
-        this.loading = false;
-        this.transferId = response.transferId;
-        this.step = 'confirmation';
-        console.log('=== DEBUG step après assignation ===', this.step);
+        this.loading.set(false);
+        this.transferId.set(response.transferId);
+        this.step.set('confirmation');
+        this.cdr.detectChanges();
       },
       error: (err) => {
-        console.log('=== DEBUG initiate error() appelé ===', err);
-        this.loading = false;
-        this.errorMessage = err.error?.message || 'Une erreur est survenue.';
+        this.loading.set(false);
+        this.errorMessage.set(err.error?.message || 'Une erreur est survenue.');
+        this.cdr.detectChanges();
       }
     });
   }
 
   submitConfirmation(): void {
-    if (this.otpForm.invalid || this.transferId === null) {
+    if (this.loading()) {
+      return;
+    }
+
+    const currentTransferId = this.transferId();
+    if (this.otpForm.invalid || currentTransferId === null) {
       this.otpForm.markAllAsTouched();
       return;
     }
 
-    this.loading = true;
-    this.errorMessage = null;
+    this.loading.set(true);
+    this.errorMessage.set(null);
 
     this.transferService.confirmTransfer({
-      transferId: this.transferId,
+      transferId: currentTransferId,
       otpCode: this.otpForm.value.otpCode
     }).subscribe({
       next: () => {
-        this.loading = false;
-        this.successMessage = 'Virement effectué avec succès.';
+        this.loading.set(false);
+        this.successMessage.set('Virement effectué avec succès.');
+        this.cdr.detectChanges();
         setTimeout(() => this.router.navigate(['/dashboard']), 1800);
       },
       error: (err) => {
-        this.loading = false;
-        this.errorMessage = err.error?.message || 'Code incorrect, veuillez réessayer.';
+        this.loading.set(false);
+        this.errorMessage.set(err.error?.message || 'Code incorrect, veuillez réessayer.');
+        this.cdr.detectChanges();
       }
     });
   }
 
   backToDetails(): void {
-    this.step = 'details';
-    this.errorMessage = null;
+    this.step.set('details');
+    this.errorMessage.set(null);
   }
 
   get destinationControl() {

@@ -56,12 +56,21 @@ export class AccountsComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+
+    // 👈 AJOUTER : Écouter les changements des filtres
+    this.filterForm.valueChanges.subscribe(() => {
+      console.log('=== DEBUG Filtres changés ===', this.filterForm.value);
+      this.applyFilters();
+      this.cdr.detectChanges();
+    });
   }
 
   selectAccount(account: Account): void {
     console.log('=== DEBUG selectAccount appelé pour ===', account.id);
     this.selectedAccount = account;
     this.transactionsLoading = true;
+    this.transactions = [];
+    this.filteredTransactions = [];
 
     this.accountService.getAccountTransactions(account.id).subscribe({
       next: (transactions) => {
@@ -81,26 +90,80 @@ export class AccountsComponent implements OnInit {
   }
 
   applyFilters(): void {
+    // Si pas de transactions, ne rien faire
+    if (this.transactions.length === 0) {
+      this.filteredTransactions = [];
+      return;
+    }
+
     const { type, startDate, endDate, minAmount, maxAmount } = this.filterForm.value;
 
+    console.log('=== DEBUG Application des filtres ===', {
+      type,
+      startDate,
+      endDate,
+      minAmount,
+      maxAmount,
+      totalTransactions: this.transactions.length
+    });
+
     this.filteredTransactions = this.transactions.filter(t => {
-      if (type && t.type !== type) return false;
+      // Filtre par type
+      if (type && t.type !== type) {
+        console.log('Filtré par type:', t.type, '!==', type);
+        return false;
+      }
 
+      // Filtre par date de début
       const transactionDate = new Date(t.date);
-      if (startDate && transactionDate < new Date(startDate)) return false;
-      if (endDate && transactionDate > new Date(endDate + 'T23:59:59')) return false;
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        if (transactionDate < start) {
+          console.log('Filtré par date début:', transactionDate, '<', start);
+          return false;
+        }
+      }
 
-      if (minAmount && t.amount < Number(minAmount)) return false;
-      if (maxAmount && t.amount > Number(maxAmount)) return false;
+      // Filtre par date de fin
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        if (transactionDate > end) {
+          console.log('Filtré par date fin:', transactionDate, '>', end);
+          return false;
+        }
+      }
+
+      // Filtre par montant minimum
+      if (minAmount && t.amount < Number(minAmount)) {
+        console.log('Filtré par montant min:', t.amount, '<', minAmount);
+        return false;
+      }
+
+      // Filtre par montant maximum
+      if (maxAmount && t.amount > Number(maxAmount)) {
+        console.log('Filtré par montant max:', t.amount, '>', maxAmount);
+        return false;
+      }
 
       return true;
     });
+
+    console.log('=== DEBUG Transactions filtrées ===', this.filteredTransactions.length);
+    this.cdr.detectChanges();
   }
 
   resetFilters(): void {
+    console.log('=== DEBUG Reset des filtres ===');
     this.filterForm.reset({
-      type: '', startDate: '', endDate: '', minAmount: '', maxAmount: ''
+      type: '',
+      startDate: '',
+      endDate: '',
+      minAmount: '',
+      maxAmount: ''
     });
+    // applyFilters() sera appelé automatiquement par valueChanges
   }
 
   isCredit(type: TransactionType): boolean {

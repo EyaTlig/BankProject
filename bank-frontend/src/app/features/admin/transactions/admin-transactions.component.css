@@ -119,11 +119,12 @@
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .data-table {
   width: 100%;
+  min-width: 700px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -159,4 +160,15 @@
 .sub-text {
   color: #94a3b8;
   font-size: 11px;
+}
+
+@media (max-width: 560px) {
+  .filter-actions {
+    flex-direction: column;
+  }
+
+  .filter-actions button {
+    width: 100%;
+    justify-content: center;
+  }
 }

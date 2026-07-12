@@ -1,13 +1,14 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AccountService } from '../../core/services/account.service';
 import { BulkTransferService } from '../../core/services/bulk-transfer.service';
 import { Account } from '../../core/models/account.model';
-import { BulkTransferItemResult } from '../../core/models/bulk-transfer.model';
+import { BulkTransferItemResult, ManualBulkTransferItem } from '../../core/models/bulk-transfer.model';
 
 type BulkStep = 'upload' | 'confirmation' | 'results';
+type BulkMode = 'csv' | 'manual';
 
 interface CsvPreviewRow {
   destinationAccountNumber: string;
@@ -18,13 +19,14 @@ interface CsvPreviewRow {
 @Component({
   selector: 'app-bulk-transfer',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
   templateUrl: './bulk-transfer.component.html',
   styleUrl: './bulk-transfer.component.css'
 })
 export class BulkTransferComponent implements OnInit {
 
   step: BulkStep = 'upload';
+  mode: BulkMode = 'csv';
   accounts: Account[] = [];
   selectedAccount: Account | undefined;
   uploadForm: FormGroup;
@@ -32,6 +34,7 @@ export class BulkTransferComponent implements OnInit {
   selectedFile: File | null = null;
   previewRows: CsvPreviewRow[] = [];
   previewError: string | null = null;
+  manualItems: ManualBulkTransferItem[] = [];
   bulkTransferId: number | null = null;
   totalItems = 0;
   results: BulkTransferItemResult[] = [];
@@ -49,6 +52,7 @@ export class BulkTransferComponent implements OnInit {
   ) {
     this.uploadForm = this.fb.group({ sourceAccountId: ['', Validators.required] });
     this.otpForm = this.fb.group({ otpCode: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(6)]] });
+    this.resetManualItems();
   }
 
   ngOnInit(): void {
@@ -62,6 +66,31 @@ export class BulkTransferComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  setMode(mode: BulkMode): void {
+    this.mode = mode;
+    this.errorMessage = null;
+    this.previewError = null;
+    this.cdr.detectChanges();
+  }
+
+  private resetManualItems(): void {
+    this.manualItems = [
+      { destinationAccountNumber: '', amount: null, label: '' },
+      { destinationAccountNumber: '', amount: null, label: '' }
+    ];
+  }
+
+  addManualRow(): void {
+    this.manualItems.push({ destinationAccountNumber: '', amount: null, label: '' });
+  }
+
+  removeManualRow(index: number): void {
+    this.manualItems.splice(index, 1);
+    if (this.manualItems.length === 0) {
+      this.resetManualItems();
+    }
   }
 
   onAccountChange(): void {
@@ -115,6 +144,10 @@ export class BulkTransferComponent implements OnInit {
   }
 
   submitUpload(): void {
+    if (this.mode === 'manual') {
+      this.submitManualUpload();
+      return;
+    }
     if (this.uploadForm.invalid || !this.selectedFile) {
       this.uploadForm.markAllAsTouched();
       if (!this.selectedFile) { this.previewError = 'Veuillez selectionner un fichier CSV.'; this.cdr.detectChanges(); }
@@ -122,6 +155,46 @@ export class BulkTransferComponent implements OnInit {
     }
     this.loading = true; this.errorMessage = null; this.cdr.detectChanges();
     this.bulkTransferService.initiateBulkTransfer(Number(this.uploadForm.value.sourceAccountId), this.selectedFile).subscribe({
+      next: (response) => {
+        this.loading = false;
+        this.bulkTransferId = response.bulkTransferId;
+        this.totalItems = response.totalItems;
+        this.step = 'confirmation';
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.loading = false;
+        this.errorMessage = err.error?.message || 'Une erreur est survenue.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  submitManualUpload(): void {
+    if (this.uploadForm.invalid) {
+      this.uploadForm.markAllAsTouched();
+      return;
+    }
+
+    const validItems = this.manualItems.filter(item =>
+      item.destinationAccountNumber.trim().length > 0 && item.amount !== null && item.amount > 0
+    );
+
+    if (validItems.length === 0) {
+      this.errorMessage = 'Ajoutez au moins un bénéficiaire valide (compte destinataire et montant).';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.loading = true; this.errorMessage = null; this.cdr.detectChanges();
+    this.bulkTransferService.initiateManualBulkTransfer({
+      sourceAccountId: Number(this.uploadForm.value.sourceAccountId),
+      items: validItems.map(item => ({
+        destinationAccountNumber: item.destinationAccountNumber.trim(),
+        amount: item.amount as number,
+        label: item.label?.trim() || null
+      }))
+    }).subscribe({
       next: (response) => {
         this.loading = false;
         this.bulkTransferId = response.bulkTransferId;
@@ -161,9 +234,10 @@ export class BulkTransferComponent implements OnInit {
   goToDashboard(): void { this.router.navigate(['/dashboard']); }
 
   startNewBulkTransfer(): void {
-    this.step = 'upload'; this.selectedFile = null; this.previewRows = [];
+    this.step = 'upload'; this.mode = 'csv'; this.selectedFile = null; this.previewRows = [];
     this.previewError = null; this.errorMessage = null; this.bulkTransferId = null;
     this.totalItems = 0; this.results = []; this.successCount = 0; this.failedCount = 0;
+    this.resetManualItems();
     this.otpForm.reset(); this.cdr.detectChanges();
   }
 

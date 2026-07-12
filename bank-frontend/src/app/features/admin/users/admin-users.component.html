@@ -1,7 +1,55 @@
-<h1 class="page-title">Gestion des utilisateurs</h1>
+<div class="page-header">
+  <h1 class="page-title">Gestion des utilisateurs</h1>
+  <button class="btn-primary" (click)="openCreateForm()">
+    <i class="ti ti-user-plus"></i> Nouveau client
+  </button>
+</div>
 
 @if (error()) {
   <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+}
+
+@if (createSuccess()) {
+  <div class="alert-success"><i class="ti ti-circle-check"></i> {{ createSuccess() }}</div>
+}
+
+@if (showCreateForm()) {
+  <div class="create-form-panel">
+    <h2 class="create-form-title">Créer un nouveau client</h2>
+
+    @if (createError()) {
+      <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ createError() }}</div>
+    }
+
+    <form (ngSubmit)="submitCreateClient()">
+      <div class="form-grid">
+        <div class="field">
+          <label for="newFirstName">Prénom</label>
+          <input id="newFirstName" type="text" name="firstName" [(ngModel)]="newClient.firstName" placeholder="Mohamed" [disabled]="creating()" />
+        </div>
+        <div class="field">
+          <label for="newLastName">Nom</label>
+          <input id="newLastName" type="text" name="lastName" [(ngModel)]="newClient.lastName" placeholder="Ben Salah" [disabled]="creating()" />
+        </div>
+        <div class="field field-wide">
+          <label for="newEmail">Email</label>
+          <input id="newEmail" type="email" name="email" [(ngModel)]="newClient.email" placeholder="client@email.com" [disabled]="creating()" />
+        </div>
+      </div>
+
+      <p class="form-hint">
+        <i class="ti ti-info-circle"></i>
+        Un mot de passe temporaire sera généré et envoyé par email au client, avec un compte courant créé automatiquement.
+      </p>
+
+      <div class="form-actions">
+        <button type="button" class="btn-cancel" (click)="cancelCreate()" [disabled]="creating()">Annuler</button>
+        <button type="submit" class="btn-primary" [disabled]="creating()">
+          {{ creating() ? 'Création...' : 'Créer le client' }}
+        </button>
+      </div>
+    </form>
+  </div>
 }
 
 @if (loading()) {
