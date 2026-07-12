@@ -58,6 +58,35 @@ public class BulkTransferService {
             throw new IllegalArgumentException("Le fichier CSV ne contient aucune ligne valide");
         }
 
+        return initiateFromItems(client, sourceAccount, items);
+    }
+
+    public InitiateBulkTransferResponse initiateManualBulkTransfer(String email, InitiateManualBulkTransferRequest request) {
+
+        Client client = clientRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Client introuvable"));
+
+        Account sourceAccount = accountRepository.findById(request.getSourceAccountId())
+                .orElseThrow(() -> new IllegalArgumentException("Compte source introuvable"));
+
+        if (!sourceAccount.getClient().getId().equals(client.getId())) {
+            throw new IllegalArgumentException("Ce compte ne vous appartient pas");
+        }
+
+        List<BulkTransferItem> items = request.getItems().stream()
+                .map(itemRequest -> BulkTransferItem.builder()
+                        .destinationAccountNumber(itemRequest.getDestinationAccountNumber().trim())
+                        .amount(itemRequest.getAmount())
+                        .label(itemRequest.getLabel())
+                        .status(BulkTransferItemStatus.PENDING)
+                        .build())
+                .toList();
+
+        return initiateFromItems(client, sourceAccount, items);
+    }
+
+    private InitiateBulkTransferResponse initiateFromItems(Client client, Account sourceAccount, List<BulkTransferItem> items) {
+
         BigDecimal totalAmount = items.stream()
                 .map(BulkTransferItem::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

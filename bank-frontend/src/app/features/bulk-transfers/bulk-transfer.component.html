@@ -25,10 +25,19 @@
 
     @if (step === 'upload') {
 
-      <h2>Virement groupé (import CSV)</h2>
+      <h2>Virement groupé</h2>
       <p class="confirmation-subtitle">
-        Importez un fichier CSV contenant vos bénéficiaires pour effectuer plusieurs virements en une seule opération.
+        Effectuez plusieurs virements en une seule opération, via un fichier CSV ou en saisissant les bénéficiaires manuellement.
       </p>
+
+      <div class="mode-tabs">
+        <button type="button" class="mode-tab" [class.active]="mode === 'csv'" (click)="setMode('csv')">
+          <i class="ti ti-file-spreadsheet"></i> Import CSV
+        </button>
+        <button type="button" class="mode-tab" [class.active]="mode === 'manual'" (click)="setMode('manual')">
+          <i class="ti ti-edit"></i> Saisie manuelle
+        </button>
+      </div>
 
       <form [formGroup]="uploadForm" (ngSubmit)="submitUpload()">
 
@@ -51,58 +60,101 @@
           </div>
         }
 
-        <label>Fichier CSV des bénéficiaires</label>
-        <div class="file-drop">
-          <input
-            type="file"
-            accept=".csv"
-            id="csvFile"
-            class="file-input"
-            (change)="onFileSelected($event)"
-          />
-          <label for="csvFile" class="file-drop-label">
-            <i class="ti ti-file-upload"></i>
-            @if (selectedFile) {
-              <span>{{ selectedFile.name }}</span>
-            } @else {
-              <span>Cliquez pour choisir un fichier .csv</span>
-            }
-          </label>
-        </div>
-        <button type="button" class="template-link" (click)="downloadTemplate()">
-          <i class="ti ti-download"></i> Télécharger un modèle CSV
-        </button>
+        @if (mode === 'csv') {
 
-        <p class="csv-hint">
-          Colonnes attendues : <code>destinationAccountNumber</code>, <code>amount</code>, <code>label</code> (optionnel).
-        </p>
-
-        @if (previewError) {
-          <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ previewError }}</div>
-        }
-
-        @if (previewRows.length > 0) {
-          <div class="preview-table-wrapper">
-            <p class="preview-title">Aperçu ({{ previewRows.length }} ligne(s) affichée(s))</p>
-            <table class="preview-table">
-              <thead>
-              <tr>
-                <th>Compte destinataire</th>
-                <th>Montant</th>
-                <th>Motif</th>
-              </tr>
-              </thead>
-              <tbody>
-                @for (row of previewRows; track $index) {
-                  <tr>
-                    <td class="mono">{{ row.destinationAccountNumber }}</td>
-                    <td>{{ row.amount }}</td>
-                    <td>{{ row.label }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+          <label>Fichier CSV des bénéficiaires</label>
+          <div class="file-drop">
+            <input
+              type="file"
+              accept=".csv"
+              id="csvFile"
+              class="file-input"
+              (change)="onFileSelected($event)"
+            />
+            <label for="csvFile" class="file-drop-label">
+              <i class="ti ti-file-upload"></i>
+              @if (selectedFile) {
+                <span>{{ selectedFile.name }}</span>
+              } @else {
+                <span>Cliquez pour choisir un fichier .csv</span>
+              }
+            </label>
           </div>
+          <button type="button" class="template-link" (click)="downloadTemplate()">
+            <i class="ti ti-download"></i> Télécharger un modèle CSV
+          </button>
+
+          <p class="csv-hint">
+            Colonnes attendues : <code>destinationAccountNumber</code>, <code>amount</code>, <code>label</code> (optionnel).
+          </p>
+
+          @if (previewError) {
+            <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ previewError }}</div>
+          }
+
+          @if (previewRows.length > 0) {
+            <div class="preview-table-wrapper">
+              <p class="preview-title">Aperçu ({{ previewRows.length }} ligne(s) affichée(s))</p>
+              <table class="preview-table">
+                <thead>
+                <tr>
+                  <th>Compte destinataire</th>
+                  <th>Montant</th>
+                  <th>Motif</th>
+                </tr>
+                </thead>
+                <tbody>
+                  @for (row of previewRows; track $index) {
+                    <tr>
+                      <td class="mono">{{ row.destinationAccountNumber }}</td>
+                      <td>{{ row.amount }}</td>
+                      <td>{{ row.label }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+        } @else {
+
+          <label>Bénéficiaires</label>
+          <div class="manual-items">
+            @for (item of manualItems; track $index) {
+              <div class="manual-item-row">
+                <input
+                  type="text"
+                  class="mono manual-account-input"
+                  placeholder="Compte destinataire (RIB)"
+                  [(ngModel)]="item.destinationAccountNumber"
+                  [ngModelOptions]="{standalone: true}"
+                />
+                <input
+                  type="number"
+                  step="0.001"
+                  class="manual-amount-input"
+                  placeholder="Montant"
+                  [(ngModel)]="item.amount"
+                  [ngModelOptions]="{standalone: true}"
+                />
+                <input
+                  type="text"
+                  class="manual-label-input"
+                  placeholder="Motif (optionnel)"
+                  [(ngModel)]="item.label"
+                  [ngModelOptions]="{standalone: true}"
+                />
+                <button type="button" class="remove-row-btn" (click)="removeManualRow($index)" title="Supprimer cette ligne">
+                  <i class="ti ti-trash"></i>
+                </button>
+              </div>
+            }
+          </div>
+
+          <button type="button" class="add-row-link" (click)="addManualRow()">
+            <i class="ti ti-plus"></i> Ajouter un bénéficiaire
+          </button>
+
         }
 
         @if (errorMessage) {

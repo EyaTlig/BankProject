@@ -5,9 +5,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tn.bank.authservice.domain.AuditLog;
+import tn.bank.authservice.domain.Role;
 import tn.bank.authservice.domain.User;
 import tn.bank.authservice.infrastructure.AuditLogRepository;
 import tn.bank.authservice.infrastructure.OtpService;
+import tn.bank.authservice.infrastructure.UserEventPublisher;
 import tn.bank.authservice.infrastructure.UserRepository;
 
 import java.time.LocalDateTime;
@@ -22,6 +24,41 @@ public class AdminService {
     private final PasswordEncoder passwordEncoder;
     private final AuditLogRepository auditLogRepository;
     private final OtpService otpService;
+    private final UserEventPublisher userEventPublisher;
+
+    @Transactional
+    public AdminUserResponse createClient(AdminCreateClientRequest request, String performedBy) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Un compte existe déjà avec cet email");
+        }
+
+        String tempPassword = UUID.randomUUID().toString().substring(0, 8);
+
+        User user = User.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(tempPassword))
+                .role(Role.CLIENT)
+                .enabled(true)
+                .build();
+
+        User savedUser = userRepository.save(user);
+
+        userEventPublisher.publishUserCreated(
+                new UserCreatedEvent(
+                        savedUser.getEmail(),
+                        savedUser.getFirstName(),
+                        savedUser.getLastName()
+                )
+        );
+
+        otpService.sendAccountCreatedEmail(savedUser.getEmail(), savedUser.getFirstName(), tempPassword);
+
+        logAction("CREATION_CLIENT", savedUser.getEmail(), performedBy, null);
+
+        return toResponse(savedUser);
+    }
 
     public List<AdminUserResponse> getAllUsers() {
         return userRepository.findAll().stream()

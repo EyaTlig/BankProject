@@ -9,6 +9,12 @@ export interface AdminUserResponse {
   enabled: boolean;
 }
 
+export interface CreateClientRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 export interface UpdateUserStatusRequest {
   enabled: boolean;
 }

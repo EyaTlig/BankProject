@@ -1,12 +1,13 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AdminUserService } from '../../../core/services/admin-user.service';
-import { AdminUserResponse, UserRole } from '../../../core/models/admin-user.model';
+import { AdminUserResponse, CreateClientRequest, UserRole } from '../../../core/models/admin-user.model';
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './admin-users.component.html',
   styleUrl: './admin-users.component.css'
 })
@@ -20,10 +21,52 @@ export class AdminUsersComponent implements OnInit {
   resetPasswordSuccessFor = signal<number | null>(null);
   confirmDeleteId = signal<number | null>(null);
 
+  showCreateForm = signal(false);
+  creating = signal(false);
+  createError = signal<string | null>(null);
+  createSuccess = signal<string | null>(null);
+  newClient: CreateClientRequest = { firstName: '', lastName: '', email: '' };
+
   constructor(private adminUserService: AdminUserService) {}
 
   ngOnInit(): void {
     this.loadUsers();
+  }
+
+  openCreateForm(): void {
+    this.newClient = { firstName: '', lastName: '', email: '' };
+    this.createError.set(null);
+    this.createSuccess.set(null);
+    this.showCreateForm.set(true);
+  }
+
+  cancelCreate(): void {
+    this.showCreateForm.set(false);
+    this.createError.set(null);
+  }
+
+  submitCreateClient(): void {
+    const { firstName, lastName, email } = this.newClient;
+    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+      this.createError.set('Tous les champs sont obligatoires.');
+      return;
+    }
+
+    this.creating.set(true);
+    this.createError.set(null);
+    this.adminUserService.createClient(this.newClient).subscribe({
+      next: (created) => {
+        this.users.update(list => [created, ...list]);
+        this.creating.set(false);
+        this.showCreateForm.set(false);
+        this.createSuccess.set(`Client ${created.firstName} ${created.lastName} créé. Ses identifiants ont été envoyés par email à ${created.email}.`);
+        setTimeout(() => this.createSuccess.set(null), 6000);
+      },
+      error: (err) => {
+        this.createError.set(err?.error?.message || "Impossible de créer ce client.");
+        this.creating.set(false);
+      }
+    });
   }
 
   loadUsers(): void {

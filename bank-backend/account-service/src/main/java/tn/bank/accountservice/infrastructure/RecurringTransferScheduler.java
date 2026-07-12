@@ -20,8 +20,9 @@ public class RecurringTransferScheduler {
     private final RecurringTransferService recurringTransferService;
     private final TransferOtpService transferOtpService;
 
-    // MODE TEST : tourne toutes les 30 secondes (remettre "0 0 2 * * *" avant la démo finale)
-    @Scheduled(cron = "*/30 * * * * *")
+    // Fréquence configurable via application.properties (recurring-transfer.scheduler.cron)
+    // Valeur par défaut : tous les jours à 2h00 du matin
+    @Scheduled(cron = "${recurring-transfer.scheduler.cron:0 0 2 * * *}")
     public void executeRecurringTransfers() {
 
         LocalDate today = LocalDate.now();

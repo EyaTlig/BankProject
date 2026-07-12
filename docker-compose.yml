@@ -100,10 +100,12 @@ services:
     restart: always
     depends_on:
       - mysql-auth
+      - rabbitmq
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-auth:3306/auth_db
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      SPRING_RABBITMQ_HOST: rabbitmq
     ports:
       - "8081:8081"
     networks:
@@ -116,10 +118,12 @@ services:
     restart: always
     depends_on:
       - mysql-account
+      - rabbitmq
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-account:3306/account_db
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      SPRING_RABBITMQ_HOST: rabbitmq
     ports:
       - "8082:8082"
     networks:

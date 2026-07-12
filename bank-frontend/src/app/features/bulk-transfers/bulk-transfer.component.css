@@ -210,11 +210,107 @@ input.input-error {
   color: #334155;
 }
 
+.mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.mode-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  border-radius: 9px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.mode-tab.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.manual-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.manual-item-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.manual-item-row input {
+  margin-bottom: 0;
+}
+
+.manual-account-input {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.remove-row-btn {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: 1px solid #fee2e2;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #dc2626;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-row-btn:hover {
+  background: #fee2e2;
+}
+
+.add-row-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  color: #4d7c0f;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 10px;
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 18px;
+  font-family: inherit;
+}
+
+.add-row-link:hover {
+  background: #f0fdf4;
+}
+
 .preview-table-wrapper {
   margin-bottom: 18px;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .preview-title {
@@ -229,6 +325,7 @@ input.input-error {
 
 .preview-table {
   width: 100%;
+  min-width: 420px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -432,4 +529,27 @@ input.input-error {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 560px) {
+  .transfer-card {
+    padding: 20px;
+  }
+
+  .results-summary,
+  .results-actions {
+    flex-direction: column;
+  }
+
+  .otp-input {
+    letter-spacing: 6px;
+  }
+
+  .manual-item-row {
+    grid-template-columns: 1fr;
+  }
+
+  .remove-row-btn {
+    width: 100%;
+  }
 }

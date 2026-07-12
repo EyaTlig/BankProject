@@ -14,6 +14,7 @@ import tn.bank.accountservice.application.BulkTransferService;
 import tn.bank.accountservice.application.ConfirmBulkTransferRequest;
 import tn.bank.accountservice.application.ConfirmBulkTransferResponse;
 import tn.bank.accountservice.application.InitiateBulkTransferResponse;
+import tn.bank.accountservice.application.InitiateManualBulkTransferRequest;
 
 @RestController
 @RequestMapping("/api/transfers/bulk")
@@ -30,6 +31,16 @@ public class BulkTransferController {
     ) {
         String email = authentication.getName();
         InitiateBulkTransferResponse response = bulkTransferService.initiateBulkTransfer(email, sourceAccountId, csvFile);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/initiate-manual")
+    public ResponseEntity<InitiateBulkTransferResponse> initiateManualBulkTransfer(
+            Authentication authentication,
+            @Valid @RequestBody InitiateManualBulkTransferRequest request
+    ) {
+        String email = authentication.getName();
+        InitiateBulkTransferResponse response = bulkTransferService.initiateManualBulkTransfer(email, request);
         return ResponseEntity.ok(response);
     }
 

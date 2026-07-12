@@ -124,11 +124,12 @@
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .data-table {
   width: 100%;
+  min-width: 680px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -244,4 +245,32 @@
   color: #b91c1c;
   font-size: 12px;
   align-self: center;
+}
+
+@media (max-width: 900px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .page-header .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .form-card {
+    padding: 16px;
+  }
+
+  .credit-panel {
+    align-items: stretch;
+  }
+
+  .credit-field input {
+    min-width: 0;
+    width: 100%;
+  }
 }

@@ -4,7 +4,8 @@ import { Observable } from 'rxjs';
 import {
   ConfirmBulkTransferRequest,
   ConfirmBulkTransferResponse,
-  InitiateBulkTransferResponse
+  InitiateBulkTransferResponse,
+  InitiateManualBulkTransferRequest
 } from '../models/bulk-transfer.model';
 
 @Injectable({ providedIn: 'root' })
@@ -19,6 +20,10 @@ export class BulkTransferService {
     formData.append('sourceAccountId', String(sourceAccountId));
     formData.append('file', file);
     return this.http.post<InitiateBulkTransferResponse>(`${this.baseUrl}/initiate`, formData);
+  }
+
+  initiateManualBulkTransfer(request: InitiateManualBulkTransferRequest): Observable<InitiateBulkTransferResponse> {
+    return this.http.post<InitiateBulkTransferResponse>(`${this.baseUrl}/initiate-manual`, request);
   }
 
   confirmBulkTransfer(request: ConfirmBulkTransferRequest): Observable<ConfirmBulkTransferResponse> {

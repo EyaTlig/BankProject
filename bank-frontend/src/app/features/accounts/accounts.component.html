@@ -27,6 +27,9 @@
 
     <div class="history-header">
       <span>Historique des transactions</span>
+      @if (selectedAccount) {
+        <span class="account-name">{{ selectedAccount.accountNumber }}</span>
+      }
     </div>
 
     <form [formGroup]="filterForm" class="filters-row">
@@ -34,11 +37,11 @@
         <option value="">Tous les types</option>
         <option value="VIREMENT_ENTRANT">Virement entrant</option>
         <option value="VIREMENT_SORTANT">Virement sortant</option>
-        <option value="DEPOT">Depot</option>
+        <option value="DEPOT">Dépôt</option>
         <option value="RETRAIT">Retrait</option>
       </select>
 
-      <input type="date" formControlName="startDate" title="Date de debut" />
+      <input type="date" formControlName="startDate" title="Date de début" />
       <input type="date" formControlName="endDate" title="Date de fin" />
       <input type="number" formControlName="minAmount" placeholder="Montant min" />
       <input type="number" formControlName="maxAmount" placeholder="Montant max" />
@@ -48,14 +51,23 @@
       </button>
     </form>
 
+    <!-- Afficher le nombre de résultats -->
+    @if (!transactionsLoading && filteredTransactions.length > 0) {
+      <div class="results-count">
+        {{ filteredTransactions.length }} transaction(s) trouvée(s)
+      </div>
+    }
+
     @if (transactionsLoading) {
       <div class="loading-state-inline"><span class="spinner"></span> Chargement de l'historique...</div>
-    } @else if (filteredTransactions.length === 0) {
-      <p class="no-transactions">Aucune transaction ne correspond a ces criteres.</p>
+    } @else if (filteredTransactions.length === 0 && transactions.length > 0) {
+      <p class="no-transactions">Aucune transaction ne correspond à ces critères.</p>
+    } @else if (filteredTransactions.length === 0 && transactions.length === 0) {
+      <p class="no-transactions">Aucune transaction pour ce compte.</p>
     } @else {
 
       <div class="table-header">
-        <span>Operation</span>
+        <span>Opération</span>
         <span>Date</span>
         <span class="align-right">Montant</span>
         <span class="align-right">Solde</span>
