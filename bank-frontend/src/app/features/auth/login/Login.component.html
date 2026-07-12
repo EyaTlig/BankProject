@@ -19,6 +19,13 @@
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
 
+        @if (infoMessage) {
+          <div class="alert-info">
+            <i class="ti ti-info-circle"></i>
+            <span>{{ infoMessage }}</span>
+          </div>
+        }
+
         <div class="input-group">
           <label for="email">Identifiant ou adresse email</label>
           <div class="input-wrapper">

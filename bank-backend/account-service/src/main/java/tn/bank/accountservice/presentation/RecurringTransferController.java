@@ -8,12 +8,14 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tn.bank.accountservice.application.CreateRecurringTransferRequest;
 import tn.bank.accountservice.application.RecurringTransferResponse;
 import tn.bank.accountservice.application.RecurringTransferService;
+import tn.bank.accountservice.application.UpdateRecurringTransferRequest;
 
 import java.util.List;
 
@@ -38,6 +40,17 @@ public class RecurringTransferController {
     public ResponseEntity<List<RecurringTransferResponse>> getMyRecurringTransfers(Authentication authentication) {
         String email = authentication.getName();
         List<RecurringTransferResponse> response = recurringTransferService.getMyRecurringTransfers(email);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<RecurringTransferResponse> updateRecurringTransfer(
+            Authentication authentication,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateRecurringTransferRequest request
+    ) {
+        String email = authentication.getName();
+        RecurringTransferResponse response = recurringTransferService.updateRecurringTransfer(email, id, request);
         return ResponseEntity.ok(response);
     }
 
