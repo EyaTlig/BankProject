@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -44,4 +46,11 @@ public class User {
 
     @Column(name = "otp_expiration")
     private LocalDateTime otpExpiration;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_permissions", joinColumns = @JoinColumn(name = "user_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "permission")
+    @Builder.Default
+    private Set<AdminPermission> permissions = new HashSet<>();
 }

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AdminAccountService } from '../../../core/services/admin-account.service';
 import { AdminAccount, AdminClient } from '../../../core/models/admin-account.model';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-admin-accounts',
@@ -32,7 +33,8 @@ export class AdminAccountsComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private adminAccountService: AdminAccountService
+    private adminAccountService: AdminAccountService,
+    public authService: AuthService
   ) {
     this.form = this.fb.group({
       clientId: ['', Validators.required],

@@ -67,14 +67,16 @@
               </div>
             </div>
           } @else {
-            <div class="request-actions">
-              <button class="btn-approve" [disabled]="actionPendingId() === req.id" (click)="approve(req)">
-                <i class="ti ti-check"></i> Approuver
-              </button>
-              <button class="btn-reject" [disabled]="actionPendingId() === req.id" (click)="startReject(req.id)">
-                <i class="ti ti-x"></i> Refuser
-              </button>
-            </div>
+            @if (authService.hasPermission('CREDITS_VALIDATE')) {
+              <div class="request-actions">
+                <button class="btn-approve" [disabled]="actionPendingId() === req.id" (click)="approve(req)">
+                  <i class="ti ti-check"></i> Approuver
+                </button>
+                <button class="btn-reject" [disabled]="actionPendingId() === req.id" (click)="startReject(req.id)">
+                  <i class="ti ti-x"></i> Refuser
+                </button>
+              </div>
+            }
           }
         }
       </div>

@@ -148,8 +148,7 @@
   color: #1B6FB8;
 }
 
-.cancel-button,
-.edit-button {
+.cancel-button {
   background: none;
   border: none;
   color: #94a3b8;
@@ -163,22 +162,51 @@
   color: #dc2626;
 }
 
-.edit-button:hover {
-  background: #eff6ff;
-  color: #2563eb;
+.cancel-button:disabled,
+.pause-button:disabled,
+.resume-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.field-note {
+.transfer-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
-  color: #64748b;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  gap: 4px;
+}
+
+.pause-button {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
   border-radius: 8px;
-  padding: 8px 12px;
-  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.pause-button:hover:not(:disabled) {
+  background: #fefce8;
+  color: #ca8a04;
+}
+
+.resume-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.resume-button:hover:not(:disabled) {
+  background: #dcfce7;
 }
 
 .modal-overlay {

@@ -43,18 +43,24 @@
         <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item">
           <i class="ti ti-shield-lock"></i> Vue d'ensemble
         </a>
-        <a routerLink="/admin/users" routerLinkActive="active" class="nav-item">
-          <i class="ti ti-users"></i> Utilisateurs
-        </a>
-        <a routerLink="/admin/accounts" routerLinkActive="active" class="nav-item">
-          <i class="ti ti-credit-card"></i> Comptes
-        </a>
-        <a routerLink="/admin/transactions" routerLinkActive="active" class="nav-item">
-          <i class="ti ti-list-details"></i> Transactions
-        </a>
-        <a routerLink="/admin/credits" routerLinkActive="active" class="nav-item">
-          <i class="ti ti-receipt-2"></i> Crédits à traiter
-        </a>
+        @if (authService.hasPermission('USERS_VIEW')) {
+          <a routerLink="/admin/users" routerLinkActive="active" class="nav-item">
+            <i class="ti ti-users"></i> Utilisateurs
+          </a>
+        }
+        @if (authService.hasPermission('ACCOUNTS_VIEW')) {
+          <a routerLink="/admin/accounts" routerLinkActive="active" class="nav-item">
+            <i class="ti ti-credit-card"></i> Comptes
+          </a>
+          <a routerLink="/admin/transactions" routerLinkActive="active" class="nav-item">
+            <i class="ti ti-list-details"></i> Transactions
+          </a>
+        }
+        @if (authService.hasPermission('CREDITS_VIEW')) {
+          <a routerLink="/admin/credits" routerLinkActive="active" class="nav-item">
+            <i class="ti ti-receipt-2"></i> Crédits à traiter
+          </a>
+        }
 
         <a routerLink="/admin/audit-logs" routerLinkActive="active" class="nav-item">
           <i class="ti ti-shield-check"></i> Journal d'audit
@@ -74,26 +80,5 @@
     <router-outlet></router-outlet>
   </main>
 </div>
-
-@if (idleTimeoutService.showWarning()) {
-  <div class="idle-modal-overlay">
-    <div class="idle-modal-panel">
-      <i class="ti ti-clock-exclamation idle-modal-icon"></i>
-      <h2>Toujours là ?</h2>
-      <p>
-        Par mesure de sécurité, votre session va être fermée dans
-        <strong>{{ idleTimeoutService.secondsRemaining() }}s</strong> en raison d'une inactivité prolongée.
-      </p>
-      <div class="idle-modal-actions">
-        <button class="btn-stay" (click)="idleTimeoutService.stayLoggedIn()">
-          Rester connecté
-        </button>
-        <button class="btn-logout-now" (click)="logout()">
-          Se déconnecter maintenant
-        </button>
-      </div>
-    </div>
-  </div>
-}
 
 <app-chatbot-widget></app-chatbot-widget>

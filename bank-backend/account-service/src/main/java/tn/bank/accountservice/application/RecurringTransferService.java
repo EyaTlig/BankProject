@@ -80,46 +80,6 @@ public class RecurringTransferService {
                 .toList();
     }
 
-    public RecurringTransferResponse updateRecurringTransfer(String email, Long recurringTransferId, UpdateRecurringTransferRequest request) {
-
-        Client client = clientRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Client introuvable"));
-
-        RecurringTransfer recurringTransfer = recurringTransferRepository.findById(recurringTransferId)
-                .orElseThrow(() -> new IllegalArgumentException("Virement permanent introuvable"));
-
-        if (!recurringTransfer.getSourceAccount().getClient().getId().equals(client.getId())) {
-            throw new IllegalArgumentException("Ce virement permanent ne vous appartient pas");
-        }
-
-        if (recurringTransfer.getStatus() != RecurringTransferStatus.ACTIVE) {
-            throw new IllegalArgumentException("Seul un virement permanent actif peut être modifié");
-        }
-
-        accountRepository.findByAccountNumber(request.getDestinationAccountNumber())
-                .orElseThrow(() -> new IllegalArgumentException("Compte destinataire introuvable"));
-
-        if (request.getEndDate() != null && request.getEndDate().isBefore(recurringTransfer.getStartDate())) {
-            throw new IllegalArgumentException("La date de fin doit être après la date de début");
-        }
-
-        if (request.getEndDate() != null && request.getEndDate().isBefore(recurringTransfer.getNextExecutionDate())) {
-            throw new IllegalArgumentException("La date de fin ne peut pas être antérieure à la prochaine exécution prévue");
-        }
-
-        recurringTransfer.setDestinationAccountNumber(request.getDestinationAccountNumber());
-        recurringTransfer.setAmount(request.getAmount());
-        recurringTransfer.setLabel(request.getLabel());
-        recurringTransfer.setFrequency(request.getFrequency());
-        recurringTransfer.setEndDate(request.getEndDate());
-
-        RecurringTransfer saved = recurringTransferRepository.save(recurringTransfer);
-
-        log.info("Virement permanent {} modifié par {}", recurringTransferId, email);
-
-        return toResponse(saved);
-    }
-
     public RecurringTransferResponse cancelRecurringTransfer(String email, Long recurringTransferId) {
 
         Client client = clientRepository.findByEmail(email)
@@ -136,6 +96,63 @@ public class RecurringTransferService {
         RecurringTransfer saved = recurringTransferRepository.save(recurringTransfer);
 
         return toResponse(saved);
+    }
+
+    public RecurringTransferResponse pauseRecurringTransfer(String email, Long recurringTransferId) {
+
+        RecurringTransfer recurringTransfer = findOwnedRecurringTransfer(email, recurringTransferId);
+
+        if (recurringTransfer.getStatus() != RecurringTransferStatus.ACTIVE) {
+            throw new IllegalArgumentException("Seul un virement permanent actif peut être mis en pause");
+        }
+
+        recurringTransfer.setStatus(RecurringTransferStatus.PAUSED);
+        RecurringTransfer saved = recurringTransferRepository.save(recurringTransfer);
+
+        return toResponse(saved);
+    }
+
+    public RecurringTransferResponse resumeRecurringTransfer(String email, Long recurringTransferId) {
+
+        RecurringTransfer recurringTransfer = findOwnedRecurringTransfer(email, recurringTransferId);
+
+        if (recurringTransfer.getStatus() != RecurringTransferStatus.PAUSED) {
+            throw new IllegalArgumentException("Seul un virement permanent en pause peut être repris");
+        }
+
+        // Si la date de la prochaine echeance est passee pendant la pause, on avance
+        // jusqu'a la prochaine echeance future (sans rejouer les occurrences manquees)
+        LocalDate today = LocalDate.now();
+        LocalDate nextDate = recurringTransfer.getNextExecutionDate();
+        while (nextDate.isBefore(today)) {
+            nextDate = computeNextExecutionDate(nextDate, recurringTransfer.getFrequency());
+        }
+
+        if (recurringTransfer.getEndDate() != null && nextDate.isAfter(recurringTransfer.getEndDate())) {
+            recurringTransfer.setStatus(RecurringTransferStatus.COMPLETED);
+        } else {
+            recurringTransfer.setNextExecutionDate(nextDate);
+            recurringTransfer.setStatus(RecurringTransferStatus.ACTIVE);
+        }
+
+        RecurringTransfer saved = recurringTransferRepository.save(recurringTransfer);
+
+        return toResponse(saved);
+    }
+
+    private RecurringTransfer findOwnedRecurringTransfer(String email, Long recurringTransferId) {
+
+        Client client = clientRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Client introuvable"));
+
+        RecurringTransfer recurringTransfer = recurringTransferRepository.findById(recurringTransferId)
+                .orElseThrow(() -> new IllegalArgumentException("Virement permanent introuvable"));
+
+        if (!recurringTransfer.getSourceAccount().getClient().getId().equals(client.getId())) {
+            throw new IllegalArgumentException("Ce virement permanent ne vous appartient pas");
+        }
+
+        return recurringTransfer;
     }
 
     @Transactional

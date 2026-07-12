@@ -29,6 +29,14 @@ public class JwtService {
         return role != null ? role.toString() : null;
     }
 
+    public java.util.List<String> extractPermissions(String token) {
+        Object permissions = extractClaim(token, claims -> claims.get("permissions"));
+        if (permissions == null || permissions.toString().isBlank()) {
+            return java.util.List.of();
+        }
+        return java.util.Arrays.asList(permissions.toString().split(","));
+    }
+
     public boolean isTokenValid(String token, String email) {
         String extractedEmail = extractEmail(token);
         return extractedEmail.equals(email) && !isTokenExpired(token);

@@ -124,7 +124,10 @@ public class AuthService {
         user.setOtpExpiration(null);
         userRepository.save(user);
 
-        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+        java.util.Set<String> permissionNames = user.getPermissions().stream()
+                .map(Enum::name)
+                .collect(java.util.stream.Collectors.toSet());
+        String token = jwtService.generateToken(user.getEmail(), user.getRole().name(), permissionNames);
 
         return new LoginResponse(
                 token,

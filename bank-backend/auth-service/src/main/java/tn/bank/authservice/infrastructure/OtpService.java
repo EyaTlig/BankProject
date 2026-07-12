@@ -41,6 +41,22 @@ public class OtpService {
         mailSender.send(message);
     }
 
+    public void sendEmployeeAccountCreatedEmail(String toEmail, String firstName, String temporaryPassword) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Votre accès administrateur a été créé - Bank Platform");
+        message.setText(
+                "Bonjour " + firstName + ",\n\n" +
+                        "Un compte collaborateur (accès au panneau d'administration) a été créé pour vous.\n\n" +
+                        "Email : " + toEmail + "\n" +
+                        "Mot de passe temporaire : " + temporaryPassword + "\n\n" +
+                        "Merci de vous connecter puis de modifier ce mot de passe dès que possible.\n" +
+                        "Vos droits d'accès ont été configurés par un administrateur et peuvent être ajustés à tout moment.\n\n" +
+                        "L'équipe Bank Platform"
+        );
+        mailSender.send(message);
+    }
+
     public void sendAccountCreatedEmail(String toEmail, String firstName, String temporaryPassword) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
