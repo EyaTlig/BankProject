@@ -16,12 +16,17 @@ C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\ja
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\CreateRecurringTransferRequest.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\CreditAccountRequest.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\InitiateBulkTransferResponse.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\InitiateManualBulkTransferRequest.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\InitiateTransferRequest.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\InitiateTransferResponse.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\ManualBulkTransferItemRequest.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\RecurringTransferResponse.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\RecurringTransferService.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\SecurityAlertResponse.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\TransactionAnomalyService.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\TransactionResponse.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\TransferService.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\UpdateRecurringTransferRequest.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\application\UserCreatedEvent.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\domain\Account.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\domain\AccountType.java
@@ -32,6 +37,9 @@ C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\ja
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\domain\RecurringFrequency.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\domain\RecurringTransfer.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\domain\RecurringTransferStatus.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\domain\SecurityAlert.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\domain\SecurityAlertSeverity.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\domain\SecurityAlertType.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\domain\Transaction.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\domain\TransactionType.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\domain\Transfer.java
@@ -44,6 +52,7 @@ C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\ja
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\infrastructure\RabbitMQConfig.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\infrastructure\RecurringTransferRepository.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\infrastructure\RecurringTransferScheduler.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\infrastructure\SecurityAlertRepository.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\infrastructure\SecurityConfig.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\infrastructure\TransactionRepository.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\infrastructure\TransferOtpService.java
@@ -52,5 +61,7 @@ C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\ja
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\presentation\AccountController.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\presentation\AdminAccountController.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\presentation\BulkTransferController.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\presentation\GlobalExceptionHandler.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\presentation\RecurringTransferController.java
+C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\presentation\SecurityAlertController.java
 C:\Users\Eya\IdeaProjects\bank-platform\bank-backend\account-service\src\main\java\tn\bank\accountservice\presentation\TransferController.java
